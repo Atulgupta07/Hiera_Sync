@@ -49,7 +49,7 @@ def register(user_in: UserCreate, db: Client = Depends(get_db)):
         "joining_date": user_in.joining_date or "Not Available",
         "association": user_in.association or "Regular",
         "avatar_url": user_in.avatar_url,
-        "status": "ACTIVE"
+        "status": "PENDING"
     }
     
     users_ref.document(fb_user.uid).set(user_data)

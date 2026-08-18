@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from google.cloud.firestore import Client
 from app.database.session import get_db
 from app.schemas.schemas import EventCreate, EventUpdate, EventResponse
-from app.auth.permissions import get_current_active_user
-from app.models.models import User
+from app.auth.permissions import get_current_active_user, check_role
+from app.models.models import User, RoleEnum
 
 router = APIRouter()
 
@@ -77,7 +77,7 @@ def get_events(
 def create_event(
     event: EventCreate,
     db: Client = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(check_role([RoleEnum.ADMIN, RoleEnum.HOD]))
 ):
     event_id = str(uuid.uuid4())
     db_event = event.dict()

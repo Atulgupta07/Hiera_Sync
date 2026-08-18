@@ -43,9 +43,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => window.removeEventListener('unauthorized', handleUnauthorized);
   }, []);
 
-  const login = async (credentials: LoginRequest) => {
+  const login = async (credentials: LoginRequest & { rememberMe?: boolean }) => {
     const response = await authApi.login(credentials);
-    setAuthToken(response.access_token);
+    setAuthToken(response.access_token, credentials.rememberMe ?? true);
     setUser(response.user);
   };
 

@@ -49,17 +49,7 @@ export default function JoinDepartment() {
     return <div className="p-8 text-center text-gray-500">Loading...</div>;
   }
 
-  // If user already assigned to department, this shouldn't be rendered (handled by layout), but just in case:
-  if (user?.department_id) {
-    return (
-      <div className="p-8 max-w-3xl mx-auto text-center mt-20">
-        <Building2 className="w-16 h-16 text-blue-500 mx-auto mb-4" />
-        <h1 className="text-3xl font-bold text-gray-800">You're already in a department!</h1>
-        <p className="text-gray-600 mt-2">Department ID: {user.department_id}</p>
-      </div>
-    );
-  }
-
+  // The ProtectedRoute handles access control. If they are here, they need to submit a join request or wait for approval.
   return (
     <div className="p-8 max-w-2xl mx-auto mt-10">
       <div className="bg-white rounded-3xl shadow-lg p-8">

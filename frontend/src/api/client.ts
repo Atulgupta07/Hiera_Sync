@@ -8,15 +8,22 @@ export class ApiError extends Error {
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1';
 
 export const getAuthToken = () => {
-  return localStorage.getItem('access_token');
+  return localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
 };
 
-export const setAuthToken = (token: string) => {
-  localStorage.setItem('access_token', token);
+export const setAuthToken = (token: string, rememberMe: boolean = true) => {
+  if (rememberMe) {
+    localStorage.setItem('access_token', token);
+    sessionStorage.removeItem('access_token');
+  } else {
+    sessionStorage.setItem('access_token', token);
+    localStorage.removeItem('access_token');
+  }
 };
 
 export const removeAuthToken = () => {
   localStorage.removeItem('access_token');
+  sessionStorage.removeItem('access_token');
 };
 
 interface RequestOptions extends RequestInit {

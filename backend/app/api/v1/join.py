@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from app.database.session import get_db
 from app.schemas.schemas import JoinRequestCreate, JoinRequestResponse
-from app.auth.permissions import get_current_active_user
+from app.auth.permissions import get_current_active_user, get_current_user
 from app.models.models import User, RoleEnum
 from google.cloud.firestore_v1.base_query import FieldFilter
 
@@ -27,7 +27,7 @@ def send_notification(db: Client, user_id: str, title: str, message: str, notifi
 def submit_join_request(
     req_in: JoinRequestCreate,
     db: Client = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ):
     if current_user.role in [RoleEnum.ADMIN, RoleEnum.HOD]:
         raise HTTPException(status_code=400, detail="Admins cannot submit join requests")
@@ -73,7 +73,7 @@ def submit_join_request(
 @router.get("/status", response_model=Optional[JoinRequestResponse])
 def get_request_status(
     db: Client = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ):
     requests_ref = db.collection('join_requests')
     # Get the most recent request

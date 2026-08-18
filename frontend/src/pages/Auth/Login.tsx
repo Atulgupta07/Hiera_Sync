@@ -20,6 +20,9 @@ export default function Login() {
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [roleIntent, setRoleIntent] = useState("FACULTY");
+  const [rememberMe, setRememberMe] = useState(false);
+  
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -29,7 +32,8 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      await login({ email, password });
+      await login({ email, password, rememberMe });
+      // The ProtectedRoute handles the rest based on user status and role.
       navigate("/dashboard");
     } catch (err: any) {
       setError(err.message || "Failed to log in");
@@ -115,6 +119,22 @@ export default function Login() {
             )}
 
             <form onSubmit={handleLogin} className="space-y-5">
+              {/* Account Type Selector */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  Account Type
+                </label>
+                <select
+                  value={roleIntent}
+                  onChange={(e) => setRoleIntent(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100 rounded-xl py-3 px-4 text-base text-slate-900 transition-all outline-none"
+                >
+                  <option value="FACULTY">Faculty / Staff</option>
+                  <option value="ADMIN">Administrator / HOD</option>
+                  <option value="STUDENT">Student / Member</option>
+                </select>
+              </div>
+
               {/* Email Input */}
               <div>
                 <label className="block text-sm font-semibold text-slate-800 mb-2">
@@ -175,6 +195,8 @@ export default function Login() {
                 <label className="flex items-center gap-2.5 cursor-pointer text-sm text-slate-700 font-medium">
                   <input 
                     type="checkbox" 
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
                     className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" 
                   />
                   <span>Remember me on this device</span>

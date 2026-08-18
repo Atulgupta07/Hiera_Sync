@@ -16,64 +16,67 @@ import { Building2, Sparkles } from "lucide-react";
 export default function Sidebar() {
   const { user } = useAuth();
 
-  const menu = [
-    {
-      name: "Dashboard",
-      path: "/dashboard",
-      icon: <FaHome className="w-5 h-5" />,
-      badge: null
-    },
-    {
-      name: "AI Assistant",
-      path: "/ai",
-      icon: <FaRobot className="w-5 h-5" />,
-      badge: "AI"
-    },
-    {
-      name: "Employees",
-      path: "/employees",
-      icon: <FaUsers className="w-5 h-5" />,
-      badge: null
-    },
-    {
-      name: "Tasks",
-      path: "/tasks",
-      icon: <FaTasks className="w-5 h-5" />,
-      badge: "1"
-    },
-    {
-      name: "Notifications",
-      path: "/notifications",
-      icon: <FaBell className="w-5 h-5" />,
-      badge: "3"
-    },
-    {
-      name: "Calendar",
-      path: "/calendar",
-      icon: <FaCalendarAlt className="w-5 h-5" />,
-      badge: null
-    },
-    {
-      name: "Approvals",
-      path: "/approvals",
-      icon: <FaClipboardCheck className="w-5 h-5" />,
-      badge: "9"
-    },
-    {
-      name: "Reports",
-      path: "/reports",
-      icon: <FaChartBar className="w-5 h-5" />,
-      badge: null
-    },
-    {
-      name: "Settings",
-      path: "/settings",
-      icon: <FaCog className="w-5 h-5" />,
-      badge: null
-    }
-  ];
-
-  if (!user?.department_id) {
+  let menu: any[] = [];
+  
+  if (user?.status === "ACTIVE") {
+    menu = [
+      {
+        name: "Dashboard",
+        path: "/dashboard",
+        icon: <FaHome className="w-5 h-5" />,
+        badge: null
+      },
+      {
+        name: "AI Assistant",
+        path: "/ai",
+        icon: <FaRobot className="w-5 h-5" />,
+        badge: "AI"
+      },
+      {
+        name: "Employees",
+        path: "/employees",
+        icon: <FaUsers className="w-5 h-5" />,
+        badge: null
+      },
+      {
+        name: "Tasks",
+        path: "/tasks",
+        icon: <FaTasks className="w-5 h-5" />,
+        badge: "1"
+      },
+      {
+        name: "Notifications",
+        path: "/notifications",
+        icon: <FaBell className="w-5 h-5" />,
+        badge: "3"
+      },
+      {
+        name: "Calendar",
+        path: "/calendar",
+        icon: <FaCalendarAlt className="w-5 h-5" />,
+        badge: null
+      },
+      {
+        name: "Approvals",
+        path: "/approvals",
+        icon: <FaClipboardCheck className="w-5 h-5" />,
+        badge: "9"
+      },
+      {
+        name: "Reports",
+        path: "/reports",
+        icon: <FaChartBar className="w-5 h-5" />,
+        badge: null
+      },
+      {
+        name: "Settings",
+        path: "/settings",
+        icon: <FaCog className="w-5 h-5" />,
+        badge: null
+      }
+    ];
+  } else {
+    // Pending users can only see Join/Create Dept
     if (user?.role === "ADMIN" || user?.role === "HOD") {
       menu.push({
         name: "Create Dept",
