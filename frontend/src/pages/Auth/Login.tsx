@@ -2,38 +2,43 @@ import loginImage from "../../assets/login image.jpg";
 import { useNavigate, Link } from "react-router-dom";
 import { useState, FormEvent } from "react";
 import { useAuth } from "../../contexts/AuthContext";
+
 import {
   Eye,
   EyeOff,
   Mail,
   Lock,
   ArrowRight,
-  BrainCircuit,
-  Sparkles,
+  GraduationCap,
   ShieldCheck,
-  GraduationCap
 } from "lucide-react";
 
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [roleIntent, setRoleIntent] = useState("FACULTY");
   const [rememberMe, setRememberMe] = useState(false);
-  
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async (e?: FormEvent) => {
     if (e) e.preventDefault();
+
     setError("");
     setLoading(true);
+
     try {
-      await login({ email, password, rememberMe });
-      // The ProtectedRoute handles the rest based on user status and role.
+      await login({
+        email,
+        password,
+        rememberMe,
+      });
+
       navigate("/dashboard");
     } catch (err: any) {
       setError(err.message || "Failed to log in");
@@ -43,202 +48,484 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-6 lg:p-8 font-sans">
-      {/* Container Split Card */}
-      <div className="w-full max-w-5xl bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200/80 grid grid-cols-1 md:grid-cols-12 min-h-[640px]">
-        
-        {/* LEFT BRANDING PANEL */}
-        <div className="md:col-span-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden text-white">
-          {/* Subtle Glow Orbs */}
-          <div className="absolute -top-12 -left-12 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl" />
-          <div className="absolute -bottom-12 -right-12 w-64 h-64 bg-rose-500/20 rounded-full blur-3xl" />
+    <div className="min-h-screen w-full bg-[#f4f6f8] flex">
 
-          {/* Top Logo */}
-          <div className="relative z-10 flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-500 to-indigo-600 p-0.5 shadow-lg shadow-indigo-500/30">
-              <div className="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center">
-                <BrainCircuit className="w-7 h-7 text-indigo-400" />
+      {/* =====================================================
+          LEFT COLLEGE / BRANDING SECTION
+      ===================================================== */}
+
+      <section className="hidden lg:flex lg:w-[48%] relative min-h-screen overflow-hidden bg-[#17365d]">
+
+        {/* College Image */}
+        <img
+          src={loginImage}
+          alt="SB Jain Institute of Technology, Management & Research"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+
+        {/* Professional dark overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#102a49]/95 via-[#17365d]/75 to-[#17365d]/45" />
+
+        {/* Bottom gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0d2038]/95 via-transparent to-[#17365d]/25" />
+
+        {/* Content */}
+        <div className="relative z-10 w-full min-h-screen flex flex-col justify-between p-10 xl:p-14">
+
+          {/* Top Brand */}
+          <Link
+            to="/"
+            className="flex items-center gap-4 w-fit"
+          >
+            <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-lg">
+              <GraduationCap
+                size={27}
+                className="text-[#17365d]"
+              />
+            </div>
+
+            <div>
+              <div className="text-[27px] font-extrabold tracking-tight text-white leading-none">
+                HieraSync <span className="text-[#e3a1aa]">AI</span>
+              </div>
+
+              <div className="mt-1.5 text-[11px] font-semibold tracking-[2px] text-white/75 uppercase">
+                Academic Workflow Management
               </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-black tracking-wide text-white">HieraSync <span className="text-indigo-400">AI</span></h2>
-              <p className="text-xs text-indigo-200/80 font-medium">CSE AIML Department Portal</p>
+          </Link>
+
+
+          {/* Main Image Content */}
+          <div className="max-w-xl">
+
+            <div className="w-14 h-1 bg-[#b32135] mb-7 rounded-full" />
+
+            <p className="text-[13px] font-bold tracking-[2px] text-white/80 uppercase mb-4">
+              SB Jain Institute of Technology,
+              Management & Research
+            </p>
+
+            <h1 className="text-5xl xl:text-[64px] font-black tracking-[-2px] leading-[1.02] text-white">
+              HieraSync
+              <span className="text-[#e3a1aa]"> AI</span>
+            </h1>
+
+            <p className="mt-5 text-lg xl:text-xl text-white/90 font-medium leading-relaxed max-w-lg">
+              A unified academic workspace for
+              faculty, tasks, approvals, schedules
+              and department reporting.
+            </p>
+
+            <div className="mt-7 flex items-center gap-3">
+              <div className="h-9 w-[3px] rounded-full bg-[#b32135]" />
+
+              <div>
+                <p className="text-sm font-bold text-white">
+                  CSE (AI & ML) Department
+                </p>
+
+                <p className="text-xs text-white/65 mt-1">
+                  SBJIT Nagpur
+                </p>
+              </div>
             </div>
+
           </div>
 
-          {/* Center Graphic & Department Hero */}
-          <div className="relative z-10 my-8 flex flex-col items-center text-center">
-            <div className="relative mb-6 group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-rose-500 to-indigo-600 rounded-3xl blur-md opacity-40 group-hover:opacity-75 transition duration-500" />
-              <div className="relative bg-slate-900/90 rounded-2xl p-4 border border-slate-800 shadow-2xl">
-                <img
-                  src={loginImage}
-                  alt="Education AI"
-                  className="w-full max-w-xs object-contain rounded-xl max-h-56"
+
+          {/* Bottom Security */}
+          <div className="flex items-center justify-between border-t border-white/20 pt-5">
+
+            <div className="flex items-center gap-2 text-xs font-medium text-white/75">
+              <ShieldCheck
+                size={17}
+                className="text-white"
+              />
+              Secure Campus Access
+            </div>
+
+            <div className="text-xs text-white/60">
+              © 2026 HieraSync AI
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+
+      {/* =====================================================
+          RIGHT LOGIN SECTION
+      ===================================================== */}
+
+      <section className="w-full lg:w-[52%] min-h-screen flex items-center justify-center px-5 py-8 sm:px-8 lg:px-12 xl:px-20 bg-[#f7f8fa]">
+
+        <div className="w-full max-w-[540px]">
+
+          {/* Mobile Brand */}
+          <div className="lg:hidden mb-8">
+
+            <Link
+              to="/"
+              className="inline-flex items-center gap-3"
+            >
+
+              <div className="w-11 h-11 rounded-xl bg-[#17365d] flex items-center justify-center">
+                <GraduationCap
+                  size={24}
+                  className="text-white"
                 />
               </div>
+
+              <div>
+                <div className="text-xl font-extrabold text-[#17365d]">
+                  HieraSync <span className="text-[#b32135]">AI</span>
+                </div>
+
+                <div className="text-[9px] font-bold tracking-[1.5px] text-slate-500">
+                  SBJIT NAGPUR
+                </div>
+              </div>
+
+            </Link>
+
+          </div>
+
+
+          {/* Login Header */}
+          <div className="mb-8">
+
+            <div className="inline-flex items-center gap-2 text-[11px] font-bold tracking-[1.5px] uppercase text-[#17365d] mb-4">
+
+              <span className="w-7 h-[2px] bg-[#b32135]" />
+
+              Department Sign In
+
             </div>
 
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-semibold mb-3">
-              <GraduationCap className="w-3.5 h-3.5 text-rose-400" />
-              <span>SBJIT Nagpur • AIML Department</span>
-            </div>
+            <h2 className="text-[36px] sm:text-[42px] font-extrabold tracking-[-1.5px] text-[#172238] leading-tight">
+              Welcome Back
+            </h2>
 
-            <h3 className="text-2xl font-bold text-white leading-snug">
-              Intelligent Workflow & Faculty Management
-            </h3>
-            <p className="text-slate-300 text-sm mt-2 max-w-sm leading-relaxed">
-              Streamlining tasks, approvals, schedule management, and academic reporting in one unified AI-driven workspace.
+            <p className="mt-2 text-[15px] text-[#6d7887]">
+              Sign in to access your HieraSync academic workspace.
             </p>
+
           </div>
 
-          {/* Bottom Security Badge */}
-          <div className="relative z-10 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-            <span className="flex items-center gap-1.5"><ShieldCheck className="w-4 h-4 text-emerald-400" /> Secure Campus Access</span>
-            <span className="flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-rose-400" /> Powered by AI</span>
-          </div>
-        </div>
 
-        {/* RIGHT AUTHENTICATION FORM */}
-        <div className="md:col-span-6 p-8 lg:p-12 flex flex-col justify-between bg-white">
-          <div>
-            <div className="mb-8">
-              <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
-                Department Sign In
-              </span>
-              <h2 className="text-3xl font-extrabold text-slate-900 mt-3">Welcome Back</h2>
-              <p className="text-slate-600 text-sm mt-1">Please enter your credentials to access your dashboard.</p>
+          {/* Error */}
+          {error && (
+            <div className="mb-6 px-4 py-3.5 rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+
+
+          {/* =====================================================
+              LOGIN FORM
+          ===================================================== */}
+
+          <form
+            onSubmit={handleLogin}
+            className="space-y-5"
+          >
+
+            {/* Account Type */}
+            <div>
+
+              <label className="block text-[13px] font-bold text-[#26364d] mb-2">
+                Account Type
+              </label>
+
+              <select
+                value={roleIntent}
+                onChange={(e) => setRoleIntent(e.target.value)}
+                className="
+                  w-full
+                  h-[52px]
+                  px-4
+                  rounded-lg
+                  bg-white
+                  border border-[#d8dde4]
+                  text-[#172238]
+                  text-[14px]
+                  font-medium
+                  outline-none
+                  transition
+                  focus:border-[#17365d]
+                  focus:ring-4
+                  focus:ring-[#17365d]/10
+                "
+              >
+                <option value="FACULTY">
+                  Faculty / Staff
+                </option>
+
+                <option value="ADMIN">
+                  Administrator / HOD
+                </option>
+
+                <option value="STUDENT">
+                  Student / Member
+                </option>
+              </select>
+
             </div>
 
-            {/* Error Banner */}
-            {error && (
-              <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-xl text-sm mb-6 flex items-center gap-3">
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
 
-            <form onSubmit={handleLogin} className="space-y-5">
-              {/* Account Type Selector */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-800 mb-2">
-                  Account Type
+            {/* Email */}
+            <div>
+
+              <label className="block text-[13px] font-bold text-[#26364d] mb-2">
+                College Email Address
+              </label>
+
+              <div className="relative">
+
+                <Mail
+                  size={18}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8793a2]"
+                />
+
+                <input
+                  type="email"
+                  placeholder="name@sbjit.edu.in"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="
+                    w-full
+                    h-[52px]
+                    pl-11
+                    pr-4
+                    rounded-lg
+                    bg-white
+                    border border-[#d8dde4]
+                    text-[#172238]
+                    text-[14px]
+                    outline-none
+                    placeholder:text-[#a1aab5]
+                    transition
+                    focus:border-[#17365d]
+                    focus:ring-4
+                    focus:ring-[#17365d]/10
+                  "
+                />
+
+              </div>
+
+            </div>
+
+
+            {/* Password */}
+            <div>
+
+              <div className="flex items-center justify-between mb-2">
+
+                <label className="text-[13px] font-bold text-[#26364d]">
+                  Password
                 </label>
-                <select
-                  value={roleIntent}
-                  onChange={(e) => setRoleIntent(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100 rounded-xl py-3 px-4 text-base text-slate-900 transition-all outline-none"
+
+                <button
+                  type="button"
+                  className="text-[12px] font-bold text-[#b32135] hover:text-[#8f1829] transition"
                 >
-                  <option value="FACULTY">Faculty / Staff</option>
-                  <option value="ADMIN">Administrator / HOD</option>
-                  <option value="STUDENT">Student / Member</option>
-                </select>
+                  Forgot Password?
+                </button>
+
               </div>
 
-              {/* Email Input */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-800 mb-2">
-                  College Email Address
-                </label>
-                <div className="relative flex items-center">
-                  <div className="absolute left-4 text-slate-400 pointer-events-none">
-                    <Mail className="w-5 h-5" />
-                  </div>
-                  <input
-                    type="email"
-                    placeholder="name@sbjit.edu.in"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="w-full bg-slate-50 border border-slate-300 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100 rounded-xl py-3 pl-12 pr-4 text-base text-slate-900 placeholder-slate-400 transition-all outline-none"
+              <div className="relative">
+
+                <Lock
+                  size={18}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8793a2]"
+                />
+
+                <input
+                  type={
+                    showPassword
+                      ? "text"
+                      : "password"
+                  }
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) =>
+                    setPassword(e.target.value)
+                  }
+                  required
+                  className="
+                    w-full
+                    h-[52px]
+                    pl-11
+                    pr-12
+                    rounded-lg
+                    bg-white
+                    border border-[#d8dde4]
+                    text-[#172238]
+                    text-[14px]
+                    outline-none
+                    placeholder:text-[#a1aab5]
+                    transition
+                    focus:border-[#17365d]
+                    focus:ring-4
+                    focus:ring-[#17365d]/10
+                  "
+                />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPassword(!showPassword)
+                  }
+                  className="
+                    absolute
+                    right-4
+                    top-1/2
+                    -translate-y-1/2
+                    text-[#8793a2]
+                    hover:text-[#17365d]
+                    transition
+                  "
+                >
+                  {showPassword ? (
+                    <EyeOff size={19} />
+                  ) : (
+                    <Eye size={19} />
+                  )}
+                </button>
+
+              </div>
+
+            </div>
+
+
+            {/* Remember Me */}
+            <div className="flex items-center pt-1">
+
+              <label className="flex items-center gap-2.5 cursor-pointer">
+
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) =>
+                    setRememberMe(e.target.checked)
+                  }
+                  className="
+                    w-4
+                    h-4
+                    rounded
+                    border-[#cbd2da]
+                    accent-[#17365d]
+                    cursor-pointer
+                  "
+                />
+
+                <span className="text-[13px] font-medium text-[#596678]">
+                  Remember me on this device
+                </span>
+
+              </label>
+
+            </div>
+
+
+            {/* Sign In Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="
+                group
+                w-full
+                h-[54px]
+                mt-2
+                rounded-lg
+                bg-[#17365d]
+                hover:bg-[#0e2b4c]
+                text-white
+                font-bold
+                text-[15px]
+                flex
+                items-center
+                justify-center
+                gap-3
+                shadow-[0_10px_25px_rgba(23,54,93,0.20)]
+                hover:shadow-[0_14px_30px_rgba(23,54,93,0.28)]
+                transition-all
+                duration-200
+                disabled:opacity-60
+                disabled:cursor-not-allowed
+              "
+            >
+
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Authenticating...</span>
+                </>
+              ) : (
+                <>
+                  <span>Sign In to Dashboard</span>
+
+                  <ArrowRight
+                    size={19}
+                    className="transition-transform duration-200 group-hover:translate-x-1"
                   />
-                </div>
-              </div>
+                </>
+              )}
 
-              {/* Password Input */}
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="text-sm font-semibold text-slate-800">
-                    Password
-                  </label>
-                  <button 
-                    type="button" 
-                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition"
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-                <div className="relative flex items-center">
-                  <div className="absolute left-4 text-slate-400 pointer-events-none">
-                    <Lock className="w-5 h-5" />
-                  </div>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="w-full bg-slate-50 border border-slate-300 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100 rounded-xl py-3 pl-12 pr-12 text-base text-slate-900 placeholder-slate-400 transition-all outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 text-slate-400 hover:text-slate-600 transition"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
+            </button>
 
-              {/* Remember Me */}
-              <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2.5 cursor-pointer text-sm text-slate-700 font-medium">
-                  <input 
-                    type="checkbox" 
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" 
-                  />
-                  <span>Remember me on this device</span>
-                </label>
-              </div>
+          </form>
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-rose-600 hover:from-indigo-700 hover:to-rose-700 text-white font-bold text-base shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-3 transition duration-200 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed mt-4"
-              >
-                {loading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Authenticating...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Sign In to Dashboard</span>
-                    <ArrowRight className="w-5 h-5" />
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
 
-          {/* Footer link */}
-          <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-            <p className="text-sm text-slate-600">
+          {/* =====================================================
+              FOOTER
+          ===================================================== */}
+
+          <div className="mt-9 pt-6 border-t border-[#e1e5ea] text-center">
+
+            <p className="text-[13px] text-[#697586]">
+
               Don't have an account?{" "}
-              <Link to="/register" className="text-indigo-600 hover:text-indigo-800 font-bold transition">
+
+              <Link
+                to="/register"
+                className="font-bold text-[#b32135] hover:text-[#8f1829] transition"
+              >
                 Create an Account
               </Link>
+
             </p>
-            <p className="text-xs text-slate-400 mt-4">
-              HieraSync AI • SBJIT Nagpur AIML Department Management
-            </p>
+
+            <div className="mt-4 flex items-center justify-center gap-2 text-[10px] font-semibold tracking-wide text-[#9aa3ae] uppercase">
+
+              <span>
+                HieraSync AI
+              </span>
+
+              <span>•</span>
+
+              <span>
+                SBJIT Nagpur
+              </span>
+
+              <span>•</span>
+
+              <span>
+                CSE AI & ML
+              </span>
+
+            </div>
+
           </div>
+
         </div>
 
-      </div>
+      </section>
+
     </div>
   );
 }

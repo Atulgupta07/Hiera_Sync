@@ -1,184 +1,525 @@
-.counter {
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  color: var(--accent);
-  background: var(--accent-bg);
-  border: 2px solid transparent;
-  transition: border-color 0.3s;
-  margin-bottom: 24px;
+/* =====================================================
+   HIERASYNC LANDING PAGE ONLY
+   DOES NOT STYLE LOGIN / DASHBOARD / OTHER PAGES
+===================================================== */
 
-  &:hover {
-    border-color: var(--accent-border);
-  }
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-}
-
-.hero {
-  position: relative;
-
-  .base,
-  .framework,
-  .vite {
-    inset-inline: 0;
-    margin: 0 auto;
-  }
-
-  .base {
-    width: 170px;
-    position: relative;
-    z-index: 0;
-  }
-
-  .framework,
-  .vite {
-    position: absolute;
-  }
-
-  .framework {
-    z-index: 1;
-    top: 34px;
-    height: 28px;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
-      scale(1.4);
-  }
-
-  .vite {
-    z-index: 0;
-    top: 107px;
-    height: 26px;
-    width: auto;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
-      scale(0.8);
-  }
-}
-
-#center {
+.hs-landing {
+  min-height: 100vh;
+  width: 100%;
+  background: #ffffff;
+  color: #172238;
   display: flex;
   flex-direction: column;
-  gap: 25px;
-  place-content: center;
-  place-items: center;
-  flex-grow: 1;
-
-  @media (max-width: 1024px) {
-    padding: 32px 20px 24px;
-    gap: 18px;
-  }
+  overflow: hidden;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
 }
 
-#next-steps {
+
+/* HEADER */
+
+.hs-header {
+  height: 84px;
+  background: #ffffff;
+  border-bottom: 1px solid #e6e9ee;
+  flex-shrink: 0;
+}
+
+.hs-header-inner {
+  width: min(1320px, calc(100% - 80px));
+  height: 100%;
+  margin: auto;
+
   display: flex;
-  border-top: 1px solid var(--border);
-  text-align: left;
+  align-items: center;
+  justify-content: space-between;
+}
 
-  & > div {
-    flex: 1 1 0;
-    padding: 32px;
-    @media (max-width: 1024px) {
-      padding: 24px 20px;
-    }
+.hs-logo-area {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  text-decoration: none;
+}
+
+.hs-logo {
+  width: 47px;
+  height: 47px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 9px;
+
+  background: #17365d;
+  color: white;
+
+  box-shadow: 0 6px 18px rgba(23, 54, 93, 0.18);
+}
+
+.hs-brand {
+  color: #172238;
+  font-size: 23px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.7px;
+}
+
+.hs-brand span {
+  color: #b32135;
+}
+
+.hs-brand-college {
+  margin-top: 5px;
+  color: #727f90;
+
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+
+/* SIGN IN */
+
+.hs-signin {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 12px 20px;
+
+  border-radius: 7px;
+
+  background: #17365d;
+  color: white;
+
+  text-decoration: none;
+
+  font-size: 13px;
+  font-weight: 800;
+
+  transition: 0.25s ease;
+}
+
+.hs-signin:hover {
+  background: #0e2d4e;
+  transform: translateY(-2px);
+}
+
+
+/* MAIN */
+
+.hs-main {
+  width: min(1320px, calc(100% - 80px));
+
+  flex: 1;
+
+  margin: auto;
+
+  padding: 48px 0;
+
+  display: grid;
+
+  grid-template-columns: 0.82fr 1.18fr;
+
+  gap: 65px;
+
+  align-items: center;
+}
+
+
+/* LEFT */
+
+.hs-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+
+/* COLLEGE NAME */
+
+.hs-college-name {
+  border-left: 5px solid #b32135;
+
+  padding-left: 19px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hs-college-name span {
+  color: #17365d;
+
+  font-size: 18px;
+  font-weight: 900;
+
+  line-height: 1.4;
+
+  letter-spacing: 0.1px;
+}
+
+.hs-college-name strong {
+  color: #b32135;
+
+  font-size: 20px;
+  font-weight: 900;
+
+  letter-spacing: 1px;
+}
+
+
+/* TITLE */
+
+.hs-title {
+  margin-top: 32px;
+
+  color: #172238;
+
+  font-size: clamp(64px, 6.5vw, 96px);
+
+  font-weight: 950;
+
+  line-height: 0.9;
+
+  letter-spacing: -5px;
+}
+
+.hs-title span {
+  color: #b32135;
+}
+
+
+/* DEPARTMENT */
+
+.hs-department {
+  margin-top: 24px;
+
+  color: #34445a;
+
+  font-size: 22px;
+
+  font-weight: 750;
+}
+
+
+/* DESCRIPTION */
+
+.hs-description {
+  max-width: 470px;
+
+  margin-top: 14px;
+
+  color: #69788d;
+
+  font-size: 15px;
+
+  line-height: 1.7;
+}
+
+
+/* ENTER BUTTON */
+
+.hs-enter {
+  position: relative;
+
+  margin-top: 30px;
+
+  min-width: 220px;
+
+  padding: 16px 25px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 13px;
+
+  border-radius: 8px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #17365d,
+      #32678f
+    );
+
+  color: white;
+
+  text-decoration: none;
+
+  font-size: 15px;
+
+  font-weight: 850;
+
+  box-shadow:
+    0 12px 28px rgba(23, 54, 93, 0.27);
+
+  overflow: hidden;
+
+  transition: 0.25s ease;
+}
+
+.hs-enter::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: -120%;
+
+  width: 75%;
+  height: 100%;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(255,255,255,0.3),
+      transparent
+    );
+
+  transform: skewX(-20deg);
+
+  transition: 0.6s ease;
+}
+
+.hs-enter:hover::before {
+  left: 140%;
+}
+
+.hs-enter:hover {
+  transform: translateY(-3px);
+
+  box-shadow:
+    0 17px 35px rgba(23, 54, 93, 0.34);
+}
+
+.hs-enter svg {
+  transition: 0.25s ease;
+}
+
+.hs-enter:hover svg {
+  transform: translateX(5px);
+}
+
+
+/* COLLEGE IMAGE */
+
+.hs-photo-section {
+  width: 100%;
+}
+
+.hs-photo {
+  position: relative;
+
+  width: 100%;
+  height: 555px;
+
+  overflow: hidden;
+
+  border-radius: 10px;
+
+  background: #e9edf1;
+
+  box-shadow:
+    0 22px 50px rgba(25, 42, 64, 0.18);
+}
+
+.hs-photo img {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: cover;
+
+  object-position: center;
+
+  transition: transform 0.7s ease;
+}
+
+.hs-photo:hover img {
+  transform: scale(1.025);
+}
+
+
+/* IMAGE BOTTOM LABEL */
+
+.hs-photo-bottom {
+  position: absolute;
+
+  left: 20px;
+  bottom: 20px;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 11px 16px;
+
+  border-radius: 7px;
+
+  background: rgba(255,255,255,0.96);
+
+  color: #26364d;
+
+  font-size: 12px;
+  font-weight: 850;
+
+  box-shadow:
+    0 7px 20px rgba(20,35,55,0.18);
+}
+
+.hs-photo-bottom svg {
+  color: #b32135;
+}
+
+
+/* FOOTER */
+
+.hs-footer {
+  min-height: 52px;
+
+  border-top: 1px solid #e5e8ed;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  flex-wrap: wrap;
+
+  gap: 9px;
+
+  padding: 10px 20px;
+
+  color: #8993a2;
+
+  font-size: 10px;
+
+  font-weight: 600;
+}
+
+
+/* TABLET */
+
+@media (max-width: 1050px) {
+
+  .hs-main {
+    grid-template-columns: 1fr;
+    gap: 45px;
   }
 
-  .icon {
-    margin-bottom: 16px;
-    width: 22px;
-    height: 22px;
-  }
-
-  @media (max-width: 1024px) {
-    flex-direction: column;
+  .hs-content {
+    align-items: center;
     text-align: center;
   }
-}
 
-#docs {
-  border-right: 1px solid var(--border);
+  .hs-college-name {
+    text-align: left;
+  }
 
-  @media (max-width: 1024px) {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
+  .hs-photo {
+    height: 450px;
   }
 }
 
-#next-steps ul {
-  list-style: none;
-  padding: 0;
-  display: flex;
-  gap: 8px;
-  margin: 32px 0 0;
 
-  .logo {
-    height: 18px;
+/* MOBILE */
+
+@media (max-width: 600px) {
+
+  .hs-header {
+    height: 70px;
   }
 
-  a {
-    color: var(--text-h);
+  .hs-header-inner {
+    width: calc(100% - 30px);
+  }
+
+  .hs-logo {
+    width: 40px;
+    height: 40px;
+  }
+
+  .hs-brand {
+    font-size: 18px;
+  }
+
+  .hs-brand-college {
+    font-size: 7px;
+  }
+
+  .hs-signin {
+    padding: 9px 12px;
+    font-size: 11px;
+  }
+
+  .hs-main {
+    width: calc(100% - 30px);
+
+    padding: 38px 0 42px;
+
+    gap: 32px;
+  }
+
+  .hs-college-name {
+    padding-left: 11px;
+    border-left-width: 3px;
+  }
+
+  .hs-college-name span {
+    font-size: 10px;
+  }
+
+  .hs-college-name strong {
+    font-size: 12px;
+  }
+
+  .hs-title {
+    margin-top: 25px;
+
+    font-size: 56px;
+
+    letter-spacing: -3.5px;
+  }
+
+  .hs-department {
+    margin-top: 17px;
     font-size: 16px;
-    border-radius: 6px;
-    background: var(--social-bg);
-    display: flex;
-    padding: 6px 12px;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    transition: box-shadow 0.3s;
-
-    &:hover {
-      box-shadow: var(--shadow);
-    }
-    .button-icon {
-      height: 18px;
-      width: 18px;
-    }
   }
 
-  @media (max-width: 1024px) {
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-
-    li {
-      flex: 1 1 calc(50% - 8px);
-    }
-
-    a {
-      width: 100%;
-      justify-content: center;
-      box-sizing: border-box;
-    }
-  }
-}
-
-#spacer {
-  height: 88px;
-  border-top: 1px solid var(--border);
-  @media (max-width: 1024px) {
-    height: 48px;
-  }
-}
-
-.ticks {
-  position: relative;
-  width: 100%;
-
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    top: -4.5px;
-    border: 5px solid transparent;
+  .hs-description {
+    font-size: 13px;
   }
 
-  &::before {
-    left: 0;
-    border-left-color: var(--border);
+  .hs-enter {
+    min-width: 190px;
+
+    padding: 14px 20px;
+
+    margin-top: 24px;
+
+    font-size: 14px;
   }
-  &::after {
-    right: 0;
-    border-right-color: var(--border);
+
+  .hs-photo {
+    height: 330px;
+  }
+
+  .hs-photo-bottom {
+    left: 10px;
+    bottom: 10px;
+
+    padding: 8px 11px;
+
+    font-size: 9px;
+  }
+
+  .hs-footer {
+    min-height: 48px;
+    font-size: 8px;
   }
 }
