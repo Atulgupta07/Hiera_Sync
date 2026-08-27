@@ -48,7 +48,7 @@ export default function CalendarPage() {
   const [selectedEvent, setSelectedEvent] =
     useState<CalendarEventData | null>(null);
 
-  const [selectedDate, setSelectedDate] = useState("");
+  const [, setSelectedDate] = useState("");
 
   const [aiInsights, setAiInsights] = useState(
     "AI is analyzing your academic calendar and upcoming department activities."
@@ -63,7 +63,7 @@ export default function CalendarPage() {
    * HOD
    * EMPLOYEE
    */
-  const userRole: UserRole = "HOD";
+  const userRole = "HOD" as UserRole;
 
   const isAdmin = userRole === "ADMIN";
   const isHOD = userRole === "HOD";

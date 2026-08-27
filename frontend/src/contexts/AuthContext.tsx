@@ -7,6 +7,7 @@ interface AuthContextType {
   loading: boolean;
   login: (credentials: LoginRequest) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<UserResponse | null>;
   isAuthenticated: boolean;
 }
 
@@ -15,6 +16,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserResponse | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const refreshUser = async (): Promise<UserResponse | null> => {
+    const token = getAuthToken();
+    if (!token) return null;
+    try {
+      const userData = await authApi.getCurrentUser();
+      setUser(userData);
+      return userData;
+    } catch (error) {
+      console.error('Failed to refresh user profile', error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     const initAuth = async () => {
@@ -55,7 +69,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

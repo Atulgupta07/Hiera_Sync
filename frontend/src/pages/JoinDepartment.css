@@ -1,0 +1,402 @@
+/* =====================================================
+   HIÉRASYNC AI — JOIN DEPARTMENT DESIGN SYSTEM
+   Theme: Warm Neutral Canvas (#F5F3EF), Deep Navy (#17233C), Plum (#6D28D9), Emerald (#059669)
+   Style: Premium Enterprise Academic SaaS
+===================================================== */
+
+:root {
+  --hs-jd-bg: #F5F3EF;
+  --hs-jd-surface: #FFFFFF;
+  --hs-jd-surface-glass: rgba(255, 255, 255, 0.90);
+
+  --hs-jd-navy: #17233C;
+  --hs-jd-plum: #6D28D9;
+  --hs-jd-plum-hover: #5B21B6;
+  --hs-jd-plum-light: #F5F3FF;
+  --hs-jd-plum-border: #DDD6FE;
+
+  --hs-jd-emerald: #059669;
+  --hs-jd-emerald-light: #ECFDF5;
+  --hs-jd-emerald-border: #A7F3D0;
+  --hs-jd-emerald-text: #065F46;
+
+  --hs-jd-amber: #D97706;
+  --hs-jd-amber-light: #FFFBEB;
+  --hs-jd-amber-border: #FDE68A;
+  --hs-jd-amber-text: #92400E;
+
+  --hs-jd-rose: #C2415A;
+  --hs-jd-rose-light: #FFF1F2;
+  --hs-jd-rose-border: #FECDD3;
+
+  --hs-jd-text-primary: #151515;
+  --hs-jd-text-secondary: #525252;
+  --hs-jd-text-muted: #737373;
+
+  --hs-jd-border: #E5E1DC;
+  --hs-jd-shadow-card: 0 20px 50px -10px rgba(23, 35, 60, 0.10), 0 4px 16px rgba(23, 35, 60, 0.04);
+  --hs-jd-shadow-btn: 0 10px 25px rgba(109, 40, 217, 0.25);
+  --hs-jd-shadow-btn-hover: 0 14px 32px rgba(109, 40, 217, 0.35);
+
+  --hs-jd-radius-card: 24px;
+  --hs-jd-radius-md: 14px;
+  --hs-jd-radius-pill: 9999px;
+}
+
+/* =====================================================
+   MAIN PAGE WRAPPER
+===================================================== */
+
+.jd-page {
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--hs-jd-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -0.01em;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+
+.jd-page *,
+.jd-page *::before,
+.jd-page *::after {
+  box-sizing: border-box;
+}
+
+/* Ambient Radial Glows */
+.jd-ambient-glow {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.jd-glow-1 {
+  width: 550px;
+  height: 550px;
+  top: -150px;
+  left: 10%;
+  background: radial-gradient(circle, rgba(109, 40, 217, 0.07) 0%, transparent 70%);
+}
+
+.jd-glow-2 {
+  width: 500px;
+  height: 500px;
+  bottom: -100px;
+  right: 10%;
+  background: radial-gradient(circle, rgba(5, 150, 105, 0.06) 0%, transparent 65%);
+}
+
+/* =====================================================
+   CENTERED CARD CONTAINER
+===================================================== */
+
+.jd-card {
+  width: 100%;
+  max-width: 620px;
+  background: var(--hs-jd-surface-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: var(--hs-jd-radius-card);
+  box-shadow: var(--hs-jd-shadow-card);
+  padding: 44px 40px;
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+
+/* Brand Icon Header */
+.jd-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--hs-jd-navy) 0%, #2A3B5C 100%);
+  color: #FFFFFF;
+  box-shadow: 0 8px 24px rgba(23, 35, 60, 0.18);
+}
+
+.jd-icon-wrapper.approved {
+  background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.25);
+}
+
+.jd-icon-wrapper.pending {
+  background: linear-gradient(135deg, #D97706 0%, #FBBF24 100%);
+  box-shadow: 0 8px 24px rgba(217, 119, 6, 0.25);
+}
+
+.jd-title {
+  margin: 0;
+  color: var(--hs-jd-navy);
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.jd-subtitle {
+  margin: 8px 0 28px;
+  color: var(--hs-jd-text-secondary);
+  font-size: 14.5px;
+  line-height: 1.55;
+  font-weight: 450;
+}
+
+/* =====================================================
+   STATUS CARDS (APPROVED, PENDING, REJECTED)
+===================================================== */
+
+.jd-status-box {
+  padding: 24px 22px;
+  border-radius: var(--hs-jd-radius-md);
+  margin-bottom: 24px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.jd-status-box.approved {
+  background: linear-gradient(135deg, #ECFDF5 0%, #F0FDF4 100%);
+  border: 1px solid var(--hs-jd-emerald-border);
+}
+
+.jd-status-box.pending {
+  background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+  border: 1px solid var(--hs-jd-amber-border);
+}
+
+.jd-status-box.rejected {
+  background: linear-gradient(135deg, #FFF1F2 0%, #FEF2F2 100%);
+  border: 1px solid var(--hs-jd-rose-border);
+}
+
+.jd-status-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.jd-status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.jd-status-box.approved .jd-status-tag {
+  color: var(--hs-jd-emerald-text);
+}
+
+.jd-status-box.pending .jd-status-tag {
+  color: var(--hs-jd-amber-text);
+}
+
+.jd-status-box.rejected .jd-status-tag {
+  color: var(--hs-jd-rose);
+}
+
+.jd-status-desc {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--hs-jd-text-secondary);
+}
+
+.jd-status-desc strong {
+  color: var(--hs-jd-navy);
+  font-weight: 700;
+}
+
+.jd-meta-details {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--hs-jd-text-muted);
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* =====================================================
+   BUTTONS & ACTION CONTROLS
+===================================================== */
+
+.jd-btn-primary {
+  width: 100%;
+  min-height: 54px;
+  border-radius: 12px;
+  border: 1px solid var(--hs-jd-plum-hover);
+  background: linear-gradient(135deg, var(--hs-jd-navy) 0%, var(--hs-jd-plum) 100%);
+  color: #FFFFFF;
+  font-family: inherit;
+  font-size: 15.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: var(--hs-jd-shadow-btn);
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.jd-btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--hs-jd-shadow-btn-hover);
+}
+
+.jd-btn-primary:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+.jd-btn-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.jd-btn-primary.emerald {
+  border-color: #047857;
+  background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+  box-shadow: 0 10px 25px rgba(5, 150, 105, 0.28);
+}
+
+.jd-btn-primary.emerald:hover:not(:disabled) {
+  box-shadow: 0 14px 32px rgba(5, 150, 105, 0.38);
+}
+
+.jd-btn-secondary {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 11px;
+  border: 1px solid var(--hs-jd-border);
+  background: var(--hs-jd-surface);
+  color: var(--hs-jd-navy);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+}
+
+.jd-btn-secondary:hover:not(:disabled) {
+  background: #F4F4F5;
+  border-color: var(--hs-jd-navy);
+}
+
+.jd-btn-secondary.spinning svg {
+  animation: jdSpin 0.75s linear infinite;
+}
+
+@keyframes jdSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* =====================================================
+   INVITATION CODE FORM
+===================================================== */
+
+.jd-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.jd-input-label {
+  display: block;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hs-jd-navy);
+  margin-bottom: 6px;
+}
+
+.jd-code-input {
+  width: 100%;
+  height: 56px;
+  border-radius: 12px;
+  border: 2px solid #D6D3D1;
+  background: #FAFAF9;
+  color: var(--hs-jd-navy);
+  font-family: 'JetBrains Mono', monospace, sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-align: center;
+  text-transform: uppercase;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.jd-code-input:focus {
+  border-color: var(--hs-jd-plum);
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3.5px rgba(109, 40, 217, 0.14);
+}
+
+.jd-error-banner {
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #FFF1F2;
+  border: 1px solid var(--hs-jd-rose-border);
+  color: var(--hs-jd-rose);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+
+/* =====================================================
+   FOOTER INFO
+===================================================== */
+
+.jd-footer-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--hs-jd-border);
+  color: var(--hs-jd-text-muted);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .jd-card {
+    padding: 32px 22px;
+  }
+
+  .jd-title {
+    font-size: 24px;
+  }
+
+  .jd-code-input {
+    font-size: 18px;
+    height: 50px;
+  }
+}

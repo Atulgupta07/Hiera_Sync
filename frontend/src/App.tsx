@@ -9,6 +9,7 @@ import { lazy, Suspense } from "react";
 
 import MainLayout from "./layouts/MainLayout";
 import { AuthProvider } from "./contexts/AuthContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Chatbot from "./components/Chatbot";
 
@@ -21,7 +22,7 @@ import "./App.css";
 
 
 /* =====================================================
-   EXISTING PAGES — DO NOT CHANGE
+   EXISTING PAGES — PRESERVED EXACTLY
 ===================================================== */
 
 const Notifications = lazy(
@@ -74,115 +75,115 @@ const CreateDepartment = lazy(
 
 
 /* =====================================================
-   LANDING PAGE ONLY
+   LANDING PAGE — PREMIUM REDESIGN
 ===================================================== */
 
 function LandingPage() {
   return (
     <div className="hs-landing">
 
+      {/* AMBIENT BACKGROUND GLOWS */}
+      <div className="hs-ambient-glow hs-glow-1" />
+      <div className="hs-ambient-glow hs-glow-2" />
+      <div className="hs-ambient-glow hs-glow-3" />
+
       {/* HEADER */}
       <header className="hs-header">
         <div className="hs-header-inner">
 
           <Link to="/" className="hs-logo-area">
-
             <div className="hs-logo">
-              <GraduationCap size={27} />
+              <GraduationCap size={25} />
             </div>
 
             <div>
               <div className="hs-brand">
-                HieraSync <span>AI</span>
+                HiéraSync <span className="hs-brand-ai">AI</span>
               </div>
-
               <div className="hs-brand-college">
                 SBJIT NAGPUR
               </div>
             </div>
-
           </Link>
 
-
-          <Link
-            to="/login"
-            className="hs-signin"
-          >
-            Sign In
-            <ArrowRight size={17} />
+          <Link to="/login" className="hs-signin">
+            <span>Sign In</span>
+            <ArrowRight size={16} />
           </Link>
 
         </div>
       </header>
 
 
-      {/* MAIN LANDING */}
+      {/* MAIN HERO SECTION */}
       <main className="hs-main">
 
-        {/* LEFT */}
+        {/* LEFT CONTENT */}
         <section className="hs-content">
 
-          <div className="hs-college-name">
-
-            <span>
-              SB JAIN INSTITUTE OF TECHNOLOGY,
-            </span>
-
-            <span>
-              MANAGEMENT & RESEARCH
-            </span>
-
-            <strong>
-              NAGPUR
-            </strong>
-
+          <div className="hs-college-pill">
+            <span className="hs-college-badge">INSTITUTION</span>
+            <div className="hs-college-text">
+              <span>SB JAIN INSTITUTE OF TECHNOLOGY, MANAGEMENT & RESEARCH</span>
+              <strong>NAGPUR</strong>
+            </div>
           </div>
 
-
           <h1 className="hs-title">
-            HieraSync <span>AI</span>
+            HiéraSync <span className="hs-title-ai">AI</span>
           </h1>
-
 
           <h2 className="hs-department">
             CSE (AI & ML) Department
           </h2>
 
-
           <p className="hs-description">
-            Smart academic workflow management
-            for a connected and efficient department.
+            Smart academic workflow management for a connected and efficient department.
           </p>
 
+          <div className="hs-cta-group">
+            <Link to="/login" className="hs-enter">
+              <span>Enter HieraSync</span>
+              <ArrowRight size={20} />
+            </Link>
 
-          <Link
-            to="/login"
-            className="hs-enter"
-          >
-            <span>Enter HieraSync</span>
-            <ArrowRight size={20} />
-          </Link>
+            <div className="hs-trust-badge">
+              <span className="hs-trust-dot" />
+              <span>Academic Workspace v2.4</span>
+            </div>
+          </div>
 
         </section>
 
 
-        {/* RIGHT — COLLEGE PHOTO */}
+        {/* RIGHT COMPOSITION (LAYERED CAMPUS VISUAL) */}
         <section className="hs-photo-section">
+          <div className="hs-composition-wrapper">
 
-          <div className="hs-photo">
+            {/* Background layered accent card for depth */}
+            <div className="hs-composition-card-back" />
 
-            <img
-              src="/sbjit-campus.jpg"
-              alt="SB Jain Institute of Technology, Management & Research, Nagpur"
-            />
+            {/* Main Campus Image Container */}
+            <div className="hs-photo">
+              <img
+                src="/sbjit-campus.jpg"
+                alt="SB Jain Institute of Technology, Management & Research, Nagpur"
+              />
+              <div className="hs-photo-overlay" />
 
-            <div className="hs-photo-bottom">
-              <GraduationCap size={17} />
-              <span>SBJIT Nagpur</span>
+              {/* Integrated Glass Badge */}
+              <div className="hs-photo-bottom">
+                <div className="hs-photo-badge-icon">
+                  <GraduationCap size={16} />
+                </div>
+                <div>
+                  <strong>SBJIT Nagpur</strong>
+                  <span>CSE (AI & ML) Campus Portal</span>
+                </div>
+              </div>
             </div>
 
           </div>
-
         </section>
 
       </main>
@@ -190,13 +191,23 @@ function LandingPage() {
 
       {/* FOOTER */}
       <footer className="hs-footer">
-        <span>HieraSync AI</span>
-        <span>•</span>
-        <span>CSE (AI & ML)</span>
-        <span>•</span>
-        <span>SBJIT Nagpur</span>
-        <span>•</span>
-        <span>© 2026</span>
+        <div className="hs-footer-inner">
+          <div className="hs-footer-left">
+            <strong>HiéraSync AI</strong>
+            <span>•</span>
+            <span>Academic Workflow Management</span>
+          </div>
+
+          <div className="hs-footer-center">
+            <span>CSE (AI & ML)</span>
+            <span>•</span>
+            <span>SBJIT Nagpur</span>
+          </div>
+
+          <div className="hs-footer-right">
+            <span>© 2026 HiéraSync AI</span>
+          </div>
+        </div>
       </footer>
 
     </div>
@@ -205,114 +216,101 @@ function LandingPage() {
 
 
 /* =====================================================
-   APP — EXISTING ROUTES UNCHANGED
+   APP ROUTER — PRESERVED EXACTLY
 ===================================================== */
 
 function App() {
   return (
     <AuthProvider>
+      <NotificationProvider>
+        <BrowserRouter>
+          <Suspense
+            fallback={
+              <div className="app-loading">
+                <div className="loading-spinner"></div>
+                <p>Loading HieraSync...</p>
+              </div>
+            }
+          >
+            <Routes>
+              {/* LANDING PAGE */}
+              <Route
+                path="/"
+                element={<LandingPage />}
+              />
 
-      <BrowserRouter>
+              {/* LOGIN */}
+              <Route
+                path="/login"
+                element={<Login />}
+              />
 
-        <Suspense
-          fallback={
-            <div className="app-loading">
-              <div className="loading-spinner"></div>
-              <p>Loading HieraSync...</p>
-            </div>
-          }
-        >
+              {/* REGISTER */}
+              <Route
+                path="/register"
+                element={<Register />}
+              />
 
-          <Routes>
+              {/* ALL INTERNAL PAGES */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={<MainLayout />}>
+                  <Route
+                    path="/dashboard"
+                    element={<Dashboard />}
+                  />
 
-            {/* ONLY LANDING PAGE */}
-            <Route
-              path="/"
-              element={<LandingPage />}
-            />
+                  <Route
+                    path="/employees"
+                    element={<Employees />}
+                  />
 
+                  <Route
+                    path="/tasks"
+                    element={<Tasks />}
+                  />
 
-            {/* LOGIN — UNCHANGED */}
-            <Route
-              path="/login"
-              element={<Login />}
-            />
+                  <Route
+                    path="/calendar"
+                    element={<CalendarPage />}
+                  />
 
+                  <Route
+                    path="/approvals"
+                    element={<Approvals />}
+                  />
 
-            {/* REGISTER — UNCHANGED */}
-            <Route
-              path="/register"
-              element={<Register />}
-            />
+                  <Route
+                    path="/reports"
+                    element={<Reports />}
+                  />
 
+                  <Route
+                    path="/settings"
+                    element={<Settings />}
+                  />
 
-            {/* ALL INTERNAL PAGES — UNCHANGED */}
-            <Route element={<ProtectedRoute />}>
+                  <Route
+                    path="/notifications"
+                    element={<Notifications />}
+                  />
 
-              <Route element={<MainLayout />}>
+                  <Route
+                    path="/join-department"
+                    element={<JoinDepartment />}
+                  />
 
-                <Route
-                  path="/dashboard"
-                  element={<Dashboard />}
-                />
-
-                <Route
-                  path="/employees"
-                  element={<Employees />}
-                />
-
-                <Route
-                  path="/tasks"
-                  element={<Tasks />}
-                />
-
-                <Route
-                  path="/calendar"
-                  element={<CalendarPage />}
-                />
-
-                <Route
-                  path="/approvals"
-                  element={<Approvals />}
-                />
-
-                <Route
-                  path="/reports"
-                  element={<Reports />}
-                />
-
-                <Route
-                  path="/settings"
-                  element={<Settings />}
-                />
-
-                <Route
-                  path="/notifications"
-                  element={<Notifications />}
-                />
-
-                <Route
-                  path="/join-department"
-                  element={<JoinDepartment />}
-                />
-
-                <Route
-                  path="/create-department"
-                  element={<CreateDepartment />}
-                />
-
+                  <Route
+                    path="/create-department"
+                    element={<CreateDepartment />}
+                  />
+                </Route>
               </Route>
+            </Routes>
 
-            </Route>
-
-          </Routes>
-
-          <Chatbot />
-
-        </Suspense>
-
-      </BrowserRouter>
-
+            <Chatbot />
+          </Suspense>
+        </BrowserRouter>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

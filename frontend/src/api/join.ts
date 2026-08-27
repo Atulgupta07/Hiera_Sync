@@ -10,6 +10,7 @@ export interface JoinRequestResponse {
   faculty_name: string;
   faculty_email: string;
   department_id: string;
+  department_name?: string;
   department_code: string;
   status: 'Pending' | 'Approved' | 'Rejected';
   requested_at: string;

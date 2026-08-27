@@ -10,12 +10,13 @@ from app.schemas.schemas import (
 from app.models.models import User, RoleEnum
 from app.auth.password import get_password_hash, verify_password
 from app.auth.jwt import create_access_token
-from app.auth.permissions import get_current_active_user, check_role
+from app.auth.permissions import get_current_active_user, get_current_user, check_role
 from datetime import timedelta
 from app.config.settings import settings
 import firebase_admin
 from firebase_admin import auth as firebase_auth
 from google.cloud.firestore import Client
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 router = APIRouter()
 
@@ -81,9 +82,28 @@ def login(login_in: LoginRequest, db: Client = Depends(get_db)):
     access_token = create_access_token(
         data={"sub": user_doc["email"]}, expires_delta=access_token_expires
     )
+
+    user_id = user_doc.get("id", users[0].id)
+    if user_doc.get("status") == "PENDING":
+        try:
+            requests_ref = db.collection('join_requests')
+            req_query = requests_ref.where(filter=FieldFilter('faculty_id', '==', user_id)).where(filter=FieldFilter('status', '==', 'Approved')).stream()
+            approved_reqs = list(req_query)
+            if approved_reqs:
+                req_data = approved_reqs[0].to_dict()
+                dept_id = req_data.get('department_id')
+                user_doc["status"] = "ACTIVE"
+                if dept_id:
+                    user_doc["department_id"] = dept_id
+                users_ref.document(user_id).update({
+                    "status": "ACTIVE",
+                    "department_id": user_doc["department_id"]
+                })
+        except Exception as e:
+            print("Login auto-sync error:", e)
     
     user_response = UserResponse(
-        id=user_doc.get("id", users[0].id),
+        id=user_id,
         name=user_doc.get("name", ""),
         email=user_doc.get("email", ""),
         role=user_doc.get("role", RoleEnum.FACULTY),
@@ -103,7 +123,7 @@ def login(login_in: LoginRequest, db: Client = Depends(get_db)):
     }
 
 @router.get("/me", response_model=UserResponse)
-def get_me(current_user: User = Depends(get_current_active_user)):
+def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 @router.post("/forgot-password")

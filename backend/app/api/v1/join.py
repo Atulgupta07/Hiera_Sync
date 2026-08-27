@@ -18,7 +18,9 @@ def send_notification(db: Client, user_id: str, title: str, message: str, notifi
         "user_id": user_id,
         "title": title,
         "message": message,
-        "type": notification_type,
+        "type": "Employees",
+        "priority": "High",
+        "target_route": "/dashboard",
         "is_read": False,
         "created_at": datetime.utcnow().isoformat()
     })
@@ -42,7 +44,7 @@ def submit_join_request(
     
     dept_data = dept_docs[0].to_dict()
 
-    if current_user.department_id == dept_data['id']:
+    if current_user.department_id == dept_data['id'] and current_user.status == "ACTIVE":
         raise HTTPException(status_code=400, detail="You are already in this department")
 
     # Check for existing pending request
@@ -58,6 +60,7 @@ def submit_join_request(
         "faculty_name": current_user.name,
         "faculty_email": current_user.email,
         "department_id": dept_data['id'],
+        "department_name": dept_data.get('name', 'Department'),
         "department_code": req_in.code.upper(),
         "status": "Pending",
         "requested_at": datetime.utcnow().isoformat()
@@ -84,7 +87,15 @@ def get_request_status(
     
     # Sort by requested_at descending
     docs.sort(key=lambda x: x.to_dict().get('requested_at', ''), reverse=True)
-    return docs[0].to_dict()
+    req_data = docs[0].to_dict()
+
+    # Populate department_name if missing
+    if not req_data.get('department_name') and req_data.get('department_id'):
+        dept_doc = db.collection('departments').document(req_data['department_id']).get()
+        if dept_doc.exists:
+            req_data['department_name'] = dept_doc.to_dict().get('name')
+
+    return req_data
 
 def get_department_requests(db: Client, current_user: User, status_filter: str):
     if current_user.role not in [RoleEnum.ADMIN, RoleEnum.HOD]:
@@ -145,16 +156,27 @@ def approve_request(
     if not dept_docs or dept_docs[0].to_dict()['id'] != req_data['department_id']:
         raise HTTPException(status_code=403, detail="Not authorized for this department")
 
+    dept_info = dept_docs[0].to_dict()
+    dept_name = dept_info.get('name', 'Department')
+
     req_ref.update({"status": "Approved"})
 
-    # Update user's department
+    # Update user's department AND set status to ACTIVE atomically
     db.collection('users').document(req_data['faculty_id']).update({
-        "department_id": req_data['department_id']
+        "department_id": req_data['department_id'],
+        "status": "ACTIVE"
     })
 
-    send_notification(db, req_data['faculty_id'], "Request Approved", f"Your request to join {dept_docs[0].to_dict()['name']} has been approved.", "SYSTEM_ALERT")
+    # Send Notification to faculty user with target_route
+    send_notification(
+        db,
+        req_data['faculty_id'],
+        "Join Request Approved",
+        f"Your request to join {dept_name} ({req_data['department_code']}) has been approved. You now have full access to the department workspace.",
+        "SYSTEM_ALERT"
+    )
 
-    return {"message": "Request approved"}
+    return {"message": "Request approved", "status": "Approved"}
 
 @router.put("/{request_id}/reject")
 def reject_request(
@@ -181,4 +203,4 @@ def reject_request(
 
     send_notification(db, req_data['faculty_id'], "Request Rejected", "Your request to join the department was rejected.", "SYSTEM_ALERT")
 
-    return {"message": "Request rejected"}
+    return {"message": "Request rejected", "status": "Rejected"}

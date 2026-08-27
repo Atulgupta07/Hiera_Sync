@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useNotifications } from "../contexts/NotificationContext";
 import { searchApi } from "../api";
 import { FaSearch, FaBell, FaUserCircle, FaSignOutAlt } from "react-icons/fa";
 import { GraduationCap } from "lucide-react";
@@ -8,6 +9,7 @@ import { GraduationCap } from "lucide-react";
 export default function Navbar() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotifications();
   
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<any[]>([]);
@@ -41,26 +43,26 @@ export default function Navbar() {
   }, [search]);
 
   return (
-    <header className="h-20 bg-white border-b border-slate-200/80 shadow-xs flex items-center justify-between px-6 lg:px-8 z-30 font-sans">
+    <header className="h-20 bg-white border-b border-[#E5E5E5] shadow-xs flex items-center justify-between px-6 lg:px-8 z-30 font-sans">
       
       {/* Search Input Box */}
       <div className="relative">
-        <div className="flex items-center bg-slate-100/90 border border-slate-200 focus-within:border-indigo-500 focus-within:bg-white focus-within:ring-4 focus-within:ring-indigo-100 rounded-xl px-4 py-2.5 w-72 sm:w-96 transition-all duration-200">
-          <FaSearch className="text-slate-400 shrink-0" />
+        <div className="flex items-center bg-[#F7F7F5] border border-[#E5E5E5] focus-within:border-[#6D28D9] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#6D28D9]/10 rounded-xl px-4 py-2.5 w-72 sm:w-96 transition-all duration-200">
+          <FaSearch className="text-[#A1A1AA] shrink-0" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search tasks, faculty, notifications..."
-            className="outline-none ml-3 w-full bg-transparent text-sm text-slate-800 placeholder-slate-400 font-medium"
+            className="outline-none ml-3 w-full bg-transparent text-sm text-[#171717] placeholder-[#A1A1AA] font-medium"
           />
         </div>
 
         {/* Search Suggestions Dropdown */}
         {search && (
-          <div className="absolute top-14 left-0 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border border-slate-200/90 z-50 max-h-96 overflow-y-auto divide-y divide-slate-100">
+          <div className="absolute top-14 left-0 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border border-[#E5E5E5] z-50 max-h-96 overflow-y-auto divide-y divide-[#F4F4F5]">
             {isSearching ? (
-              <div className="p-4 text-slate-500 text-center text-sm font-medium">Searching department records...</div>
+              <div className="p-4 text-[#71717A] text-center text-sm font-medium">Searching department records...</div>
             ) : results.length > 0 ? (
               results.map((item, index) => (
                 <div
@@ -73,14 +75,14 @@ export default function Navbar() {
                     else if (item.type === "notification") navigate("/notifications");
                     else navigate("/dashboard");
                   }}
-                  className="px-5 py-3 hover:bg-indigo-50/70 cursor-pointer text-slate-800 flex flex-col transition"
+                  className="px-5 py-3 hover:bg-[#F5F3FF] cursor-pointer text-[#171717] flex flex-col transition"
                 >
-                  <span className="font-bold text-sm text-slate-900">{item.title}</span>
-                  <span className="text-xs text-indigo-600 font-semibold capitalize mt-0.5">{item.type}</span>
+                  <span className="font-semibold text-sm text-[#171717]">{item.title}</span>
+                  <span className="text-xs text-[#6D28D9] font-medium capitalize mt-0.5">{item.type}</span>
                 </div>
               ))
             ) : (
-              <div className="p-4 text-slate-500 text-center text-sm font-medium">No results found</div>
+              <div className="p-4 text-[#71717A] text-center text-sm font-medium">No results found</div>
             )}
           </div>
         )}
@@ -90,49 +92,51 @@ export default function Navbar() {
       <div className="flex items-center gap-5 sm:gap-7">
         
         {/* Department Badge */}
-        <div className="hidden md:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-100">
-          <GraduationCap className="w-4 h-4 text-indigo-600" />
+        <div className="hidden md:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-[#F5F3FF] border border-[#EDE9FE]">
+          <GraduationCap className="w-4 h-4 text-[#6D28D9]" />
           <div className="text-left">
-            <h3 className="font-bold text-xs text-indigo-900 leading-tight">AIML Department - SBJIT</h3>
-            <p className="text-[11px] text-indigo-600 font-medium leading-tight">Nagpur Campus</p>
+            <h3 className="font-bold text-xs text-[#2E1065] leading-tight">AIML Department - SBJIT</h3>
+            <p className="text-[11px] text-[#6D28D9] font-medium leading-tight">Nagpur Campus</p>
           </div>
         </div>
 
         {/* Notification Bell Button */}
         <button
           onClick={() => navigate("/notifications")}
-          className="relative p-2.5 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition shadow-xs"
+          className="relative p-2.5 rounded-xl bg-[#F7F7F5] hover:bg-[#F5F3FF] hover:text-[#6D28D9] text-[#525252] border border-[#E5E5E5] transition shadow-xs"
           title="Notifications"
         >
-          <FaBell className="text-lg" />
-          {/* Active pulse badge indicator */}
-          <span className="absolute -top-1 -right-1 flex h-4 w-4">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 text-white text-[10px] font-bold items-center justify-center">
-              3
+          <FaBell className="text-base" />
+          {/* Active dynamic pulse badge indicator */}
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] px-1">
+              <span className="animate-ping absolute inset-0 rounded-full bg-rose-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-4 min-w-[16px] px-1 bg-[#E11D48] text-white text-[10px] font-bold items-center justify-center">
+                {unreadCount}
+              </span>
             </span>
-          </span>
+          )}
         </button>
 
         {/* User Profile Dropdown Menu */}
         <div className="relative group">
-          <div className="flex items-center gap-3 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 px-3.5 py-1.5 rounded-xl cursor-pointer transition">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-600 to-rose-500 text-white font-extrabold text-xs flex items-center justify-center shadow-xs">
+          <div className="flex items-center gap-3 bg-[#F7F7F5] hover:bg-[#EFEFEF] border border-[#E5E5E5] px-3.5 py-1.5 rounded-xl cursor-pointer transition">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#6D28D9] to-[#9333EA] text-white font-bold text-xs flex items-center justify-center shadow-xs">
               {user?.name ? user.name.substring(0, 2).toUpperCase() : <FaUserCircle className="text-xl" />}
             </div>
             
             <div className="hidden sm:block text-left">
-              <h3 className="font-bold text-sm text-slate-800 leading-tight">{user?.name || "Faculty Member"}</h3>
-              <p className="text-xs text-slate-500 font-semibold leading-tight">{user?.role || "FACULTY"}</p>
+              <h3 className="font-bold text-sm text-[#171717] leading-tight">{user?.name || "Admin User"}</h3>
+              <p className="text-xs text-[#737373] font-medium leading-tight">{user?.role || "ADMIN"}</p>
             </div>
           </div>
 
           {/* Logout Hover Menu */}
           <div className="hidden group-hover:block absolute right-0 top-full pt-2 z-50 w-48">
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-200/90 p-2">
-              <div className="px-3 py-2 border-b border-slate-100 mb-1">
-                <p className="text-xs font-semibold text-slate-400">Signed in as</p>
-                <p className="text-xs font-bold text-slate-800 truncate">{user?.email || "faculty@sbjit.edu.in"}</p>
+            <div className="bg-white rounded-2xl shadow-xl border border-[#E5E5E5] p-2">
+              <div className="px-3 py-2 border-b border-[#F4F4F5] mb-1">
+                <p className="text-xs font-medium text-[#737373]">Signed in as</p>
+                <p className="text-xs font-bold text-[#171717] truncate">{user?.email || "admin@campuspulse.com"}</p>
               </div>
               <button 
                 onClick={handleLogout}

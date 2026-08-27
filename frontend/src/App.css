@@ -1,134 +1,218 @@
 /* =====================================================
-   HIERASYNC LANDING PAGE ONLY
-   DOES NOT STYLE LOGIN / DASHBOARD / OTHER PAGES
+   HIÉRASYNC AI — LANDING PAGE DESIGN SYSTEM
+   Theme: Warm Neutral Canvas (#F5F3EF), Deep Navy & Plum/Rose
+   Style: Premium University SaaS Platform
+===================================================== */
+
+:root {
+  --hs-lp-bg: #F5F3EF;
+  --hs-lp-surface: #FFFFFF;
+  --hs-lp-surface-glass: rgba(255, 255, 255, 0.85);
+
+  --hs-lp-navy: #17233C;
+  --hs-lp-plum: #6D28D9;
+  --hs-lp-rose: #C2415A;
+  --hs-lp-emerald: #059669;
+  --hs-lp-amber: #D97706;
+
+  --hs-lp-text-primary: #151515;
+  --hs-lp-text-secondary: #525252;
+  --hs-lp-text-muted: #737373;
+
+  --hs-lp-border: rgba(23, 35, 60, 0.08);
+  --hs-lp-border-subtle: rgba(23, 35, 60, 0.04);
+
+  --hs-lp-shadow-sm: 0 2px 8px rgba(23, 35, 60, 0.04);
+  --hs-lp-shadow-md: 0 12px 32px -4px rgba(23, 35, 60, 0.08);
+  --hs-lp-shadow-lg: 0 24px 60px -12px rgba(23, 35, 60, 0.16);
+  --hs-lp-shadow-cta: 0 14px 30px rgba(109, 40, 217, 0.28);
+}
+
+/* =====================================================
+   LANDING PAGE CONTAINER & AMBIENT CANVAS
 ===================================================== */
 
 .hs-landing {
   min-height: 100vh;
   width: 100%;
-  background: #ffffff;
-  color: #172238;
+  background-color: var(--hs-lp-bg);
+  color: var(--hs-lp-text-primary);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  position: relative;
+  overflow-x: hidden;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -0.01em;
+  box-sizing: border-box;
 }
 
+.hs-landing *,
+.hs-landing *::before,
+.hs-landing *::after {
+  box-sizing: border-box;
+}
 
-/* HEADER */
+/* Subtle ambient radial light in the background */
+.hs-ambient-glow {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hs-glow-1 {
+  width: 600px;
+  height: 600px;
+  top: -150px;
+  right: 5%;
+  background: radial-gradient(circle, rgba(109, 40, 217, 0.07) 0%, transparent 70%);
+}
+
+.hs-glow-2 {
+  width: 500px;
+  height: 500px;
+  bottom: 10%;
+  left: 2%;
+  background: radial-gradient(circle, rgba(194, 65, 90, 0.05) 0%, transparent 65%);
+}
+
+.hs-glow-3 {
+  width: 400px;
+  height: 400px;
+  top: 40%;
+  right: 40%;
+  background: radial-gradient(circle, rgba(217, 119, 6, 0.03) 0%, transparent 60%);
+}
+
+/* =====================================================
+   HEADER
+===================================================== */
 
 .hs-header {
-  height: 84px;
-  background: #ffffff;
-  border-bottom: 1px solid #e6e9ee;
+  height: 80px;
+  background: var(--hs-lp-surface-glass);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--hs-lp-border);
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  transition: all 0.2s ease;
 }
 
 .hs-header-inner {
-  width: min(1320px, calc(100% - 80px));
+  width: min(1340px, calc(100% - 64px));
   height: 100%;
-  margin: auto;
-
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
+/* Header Brand Logo */
 .hs-logo-area {
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: 12px;
   text-decoration: none;
+  transition: transform 0.2s ease;
+}
+
+.hs-logo-area:hover {
+  transform: translateY(-1px);
 }
 
 .hs-logo {
-  width: 47px;
-  height: 47px;
-
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-
-  border-radius: 9px;
-
-  background: #17365d;
-  color: white;
-
-  box-shadow: 0 6px 18px rgba(23, 54, 93, 0.18);
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--hs-lp-navy) 0%, #2A3B5C 100%);
+  color: #FFFFFF;
+  box-shadow: 0 4px 14px rgba(23, 35, 60, 0.18);
+  flex-shrink: 0;
 }
 
 .hs-brand {
-  color: #172238;
-  font-size: 23px;
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: -0.7px;
+  color: var(--hs-lp-navy);
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
-.hs-brand span {
-  color: #b32135;
+.hs-brand-ai {
+  color: var(--hs-lp-rose);
+  font-weight: 900;
 }
 
 .hs-brand-college {
-  margin-top: 5px;
-  color: #727f90;
-
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 2px;
+  margin-top: 3px;
+  color: var(--hs-lp-text-muted);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
-
-/* SIGN IN */
-
+/* Header Sign In Button */
 .hs-signin {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-
-  padding: 12px 20px;
-
-  border-radius: 7px;
-
-  background: #17365d;
-  color: white;
-
+  padding: 10px 20px;
+  border-radius: 10px;
+  background: var(--hs-lp-navy);
+  color: #FFFFFF;
   text-decoration: none;
-
-  font-size: 13px;
-  font-weight: 800;
-
-  transition: 0.25s ease;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  box-shadow: 0 2px 8px rgba(23, 35, 60, 0.12);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .hs-signin:hover {
-  background: #0e2d4e;
-  transform: translateY(-2px);
+  background: #0E1728;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(23, 35, 60, 0.22);
 }
 
+.hs-signin:active {
+  transform: translateY(0);
+}
 
-/* MAIN */
+.hs-signin svg {
+  transition: transform 0.2s ease;
+}
+
+.hs-signin:hover svg {
+  transform: translateX(3px);
+}
+
+/* =====================================================
+   MAIN HERO COMPOSITION
+===================================================== */
 
 .hs-main {
-  width: min(1320px, calc(100% - 80px));
-
+  width: min(1340px, calc(100% - 64px));
   flex: 1;
-
-  margin: auto;
-
-  padding: 48px 0;
-
+  margin: 0 auto;
+  padding: 56px 0 64px;
   display: grid;
-
-  grid-template-columns: 0.82fr 1.18fr;
-
-  gap: 65px;
-
+  grid-template-columns: 1fr 1.08fr;
+  gap: 60px;
   align-items: center;
+  position: relative;
+  z-index: 10;
 }
 
-
-/* LEFT */
+/* =====================================================
+   LEFT CONTENT SECTION
+===================================================== */
 
 .hs-content {
   display: flex;
@@ -136,152 +220,123 @@
   align-items: flex-start;
 }
 
+/* Institution Pill */
+.hs-college-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px 6px 6px;
+  border: 1px solid rgba(23, 35, 60, 0.10);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.80);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--hs-lp-shadow-sm);
+  margin-bottom: 24px;
+}
 
-/* COLLEGE NAME */
+.hs-college-badge {
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background: var(--hs-lp-navy);
+  color: #FFFFFF;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
 
-.hs-college-name {
-  border-left: 5px solid #b32135;
-
-  padding-left: 19px;
-
+.hs-college-text {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--hs-lp-navy);
 }
 
-.hs-college-name span {
-  color: #17365d;
-
-  font-size: 18px;
-  font-weight: 900;
-
-  line-height: 1.4;
-
-  letter-spacing: 0.1px;
+.hs-college-text strong {
+  color: var(--hs-lp-rose);
+  font-weight: 800;
 }
 
-.hs-college-name strong {
-  color: #b32135;
-
-  font-size: 20px;
-  font-weight: 900;
-
-  letter-spacing: 1px;
-}
-
-
-/* TITLE */
-
+/* Hero Main Title */
 .hs-title {
-  margin-top: 32px;
-
-  color: #172238;
-
-  font-size: clamp(64px, 6.5vw, 96px);
-
-  font-weight: 950;
-
-  line-height: 0.9;
-
-  letter-spacing: -5px;
+  margin: 0;
+  color: var(--hs-lp-navy);
+  font-size: clamp(52px, 5.5vw, 84px);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
 }
 
-.hs-title span {
-  color: #b32135;
+.hs-title-ai {
+  color: var(--hs-lp-rose);
+  font-weight: 900;
 }
 
-
-/* DEPARTMENT */
-
+/* Department Subtitle */
 .hs-department {
-  margin-top: 24px;
-
-  color: #34445a;
-
+  margin: 18px 0 0;
+  color: var(--hs-lp-text-primary);
   font-size: 22px;
-
-  font-weight: 750;
+  font-weight: 700;
+  letter-spacing: -0.015em;
 }
 
-
-/* DESCRIPTION */
-
+/* Description Text */
 .hs-description {
-  max-width: 470px;
-
-  margin-top: 14px;
-
-  color: #69788d;
-
-  font-size: 15px;
-
-  line-height: 1.7;
+  max-width: 480px;
+  margin: 14px 0 0;
+  color: var(--hs-lp-text-secondary);
+  font-size: 15.5px;
+  line-height: 1.65;
+  font-weight: 450;
 }
 
+/* CTA Group */
+.hs-cta-group {
+  margin-top: 36px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+}
 
-/* ENTER BUTTON */
-
+/* Enter HieraSync Primary Button */
 .hs-enter {
   position: relative;
-
-  margin-top: 30px;
-
-  min-width: 220px;
-
-  padding: 16px 25px;
-
+  min-height: 56px;
+  padding: 0 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
-  gap: 13px;
-
-  border-radius: 8px;
-
-  background:
-    linear-gradient(
-      135deg,
-      #17365d,
-      #32678f
-    );
-
-  color: white;
-
+  gap: 12px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, var(--hs-lp-navy) 0%, var(--hs-lp-plum) 100%);
+  color: #FFFFFF;
   text-decoration: none;
-
-  font-size: 15px;
-
-  font-weight: 850;
-
-  box-shadow:
-    0 12px 28px rgba(23, 54, 93, 0.27);
-
+  font-size: 15.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  box-shadow: var(--hs-lp-shadow-cta);
   overflow: hidden;
-
-  transition: 0.25s ease;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
 }
 
 .hs-enter::before {
   content: "";
-
   position: absolute;
-
   top: 0;
   left: -120%;
-
-  width: 75%;
+  width: 70%;
   height: 100%;
-
-  background:
-    linear-gradient(
-      90deg,
-      transparent,
-      rgba(255,255,255,0.3),
-      transparent
-    );
-
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.28),
+    transparent
+  );
   transform: skewX(-20deg);
-
   transition: 0.6s ease;
 }
 
@@ -290,126 +345,220 @@
 }
 
 .hs-enter:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(109, 40, 217, 0.36);
+}
 
-  box-shadow:
-    0 17px 35px rgba(23, 54, 93, 0.34);
+.hs-enter:active {
+  transform: scale(0.985);
 }
 
 .hs-enter svg {
-  transition: 0.25s ease;
+  transition: transform 0.2s ease;
 }
 
 .hs-enter:hover svg {
-  transform: translateX(5px);
+  transform: translateX(4px);
 }
 
+/* Trust / Version Badge */
+.hs-trust-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.70);
+  border: 1px solid var(--hs-lp-border);
+  color: var(--hs-lp-text-secondary);
+  font-size: 12.5px;
+  font-weight: 550;
+}
 
-/* COLLEGE IMAGE */
+.hs-trust-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--hs-lp-emerald);
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2);
+}
+
+/* =====================================================
+   RIGHT COMPOSITION (LAYERED CAMPUS VISUAL)
+===================================================== */
 
 .hs-photo-section {
   width: 100%;
+  position: relative;
 }
 
+.hs-composition-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* Background offset accent shape */
+.hs-composition-card-back {
+  position: absolute;
+  inset: 16px -14px -14px 16px;
+  border-radius: 26px;
+  background: linear-gradient(135deg, rgba(109, 40, 217, 0.12) 0%, rgba(194, 65, 90, 0.10) 100%);
+  border: 1px solid rgba(109, 40, 217, 0.15);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Main Photo Card */
 .hs-photo {
   position: relative;
-
+  z-index: 2;
   width: 100%;
-  height: 555px;
-
+  height: 520px;
   overflow: hidden;
+  border-radius: 24px;
+  background: #E8E5DF;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: var(--hs-lp-shadow-lg);
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
 
-  border-radius: 10px;
-
-  background: #e9edf1;
-
-  box-shadow:
-    0 22px 50px rgba(25, 42, 64, 0.18);
+.hs-photo:hover {
+  transform: translateY(-3px) scale(1.005);
+  box-shadow: 0 30px 70px -15px rgba(23, 35, 60, 0.22);
 }
 
 .hs-photo img {
   width: 100%;
   height: 100%;
-
   display: block;
-
   object-fit: cover;
-
   object-position: center;
-
-  transition: transform 0.7s ease;
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .hs-photo:hover img {
-  transform: scale(1.025);
+  transform: scale(1.03);
 }
 
+/* Subtle Gradient Edge Overlay */
+.hs-photo-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 50%,
+    rgba(23, 35, 60, 0.45) 100%
+  );
+  pointer-events: none;
+}
 
-/* IMAGE BOTTOM LABEL */
-
+/* Integrated Glass Badge */
 .hs-photo-bottom {
   position: absolute;
-
   left: 20px;
   bottom: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.90);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
+  z-index: 3;
+}
 
+.hs-photo-badge-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--hs-lp-navy);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hs-photo-bottom strong {
+  display: block;
+  color: var(--hs-lp-navy);
+  font-size: 13.5px;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+.hs-photo-bottom span {
+  display: block;
+  color: var(--hs-lp-text-secondary);
+  font-size: 11.5px;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* =====================================================
+   FOOTER
+===================================================== */
+
+.hs-footer {
+  min-height: 64px;
+  background: var(--hs-lp-surface-glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid var(--hs-lp-border);
+  display: flex;
+  align-items: center;
+  padding: 16px 0;
+  position: relative;
+  z-index: 10;
+}
+
+.hs-footer-inner {
+  width: min(1340px, calc(100% - 64px));
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 12.5px;
+  color: var(--hs-lp-text-muted);
+}
+
+.hs-footer-left {
   display: flex;
   align-items: center;
   gap: 8px;
-
-  padding: 11px 16px;
-
-  border-radius: 7px;
-
-  background: rgba(255,255,255,0.96);
-
-  color: #26364d;
-
-  font-size: 12px;
-  font-weight: 850;
-
-  box-shadow:
-    0 7px 20px rgba(20,35,55,0.18);
 }
 
-.hs-photo-bottom svg {
-  color: #b32135;
+.hs-footer-left strong {
+  color: var(--hs-lp-navy);
+  font-weight: 700;
 }
 
-
-/* FOOTER */
-
-.hs-footer {
-  min-height: 52px;
-
-  border-top: 1px solid #e5e8ed;
-
+.hs-footer-center {
   display: flex;
-
   align-items: center;
-  justify-content: center;
-
-  flex-wrap: wrap;
-
-  gap: 9px;
-
-  padding: 10px 20px;
-
-  color: #8993a2;
-
-  font-size: 10px;
-
-  font-weight: 600;
+  gap: 8px;
+  font-weight: 550;
+  color: var(--hs-lp-text-secondary);
 }
 
+.hs-footer-right {
+  font-weight: 500;
+}
 
-/* TABLET */
+/* =====================================================
+   RESPONSIVE DESIGN (TABLET & MOBILE)
+===================================================== */
 
-@media (max-width: 1050px) {
-
+@media (max-width: 1080px) {
   .hs-main {
     grid-template-columns: 1fr;
-    gap: 45px;
+    gap: 48px;
+    padding: 40px 0 50px;
   }
 
   .hs-content {
@@ -417,31 +566,58 @@
     text-align: center;
   }
 
-  .hs-college-name {
-    text-align: left;
+  .hs-description {
+    max-width: 540px;
+  }
+
+  .hs-cta-group {
+    justify-content: center;
   }
 
   .hs-photo {
-    height: 450px;
+    height: 440px;
   }
 }
 
+@media (max-width: 768px) {
+  .hs-header-inner,
+  .hs-main,
+  .hs-footer-inner {
+    width: calc(100% - 36px);
+  }
 
-/* MOBILE */
+  .hs-title {
+    font-size: 46px;
+    letter-spacing: -0.025em;
+  }
 
-@media (max-width: 600px) {
+  .hs-department {
+    font-size: 18px;
+  }
 
+  .hs-description {
+    font-size: 14px;
+  }
+
+  .hs-photo {
+    height: 360px;
+  }
+
+  .hs-footer-inner {
+    flex-direction: column;
+    text-align: center;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 520px) {
   .hs-header {
     height: 70px;
   }
 
-  .hs-header-inner {
-    width: calc(100% - 30px);
-  }
-
   .hs-logo {
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
   }
 
   .hs-brand {
@@ -449,77 +625,54 @@
   }
 
   .hs-brand-college {
-    font-size: 7px;
+    font-size: 8px;
   }
 
   .hs-signin {
-    padding: 9px 12px;
-    font-size: 11px;
+    padding: 8px 14px;
+    font-size: 12.5px;
   }
 
-  .hs-main {
-    width: calc(100% - 30px);
-
-    padding: 38px 0 42px;
-
-    gap: 32px;
+  .hs-college-pill {
+    padding: 4px 10px 4px 4px;
   }
 
-  .hs-college-name {
-    padding-left: 11px;
-    border-left-width: 3px;
+  .hs-college-badge {
+    font-size: 8.5px;
   }
 
-  .hs-college-name span {
+  .hs-college-text {
     font-size: 10px;
   }
 
-  .hs-college-name strong {
-    font-size: 12px;
-  }
-
   .hs-title {
-    margin-top: 25px;
-
-    font-size: 56px;
-
-    letter-spacing: -3.5px;
-  }
-
-  .hs-department {
-    margin-top: 17px;
-    font-size: 16px;
-  }
-
-  .hs-description {
-    font-size: 13px;
+    font-size: 38px;
   }
 
   .hs-enter {
-    min-width: 190px;
+    width: 100%;
+    min-height: 52px;
+  }
 
-    padding: 14px 20px;
-
-    margin-top: 24px;
-
-    font-size: 14px;
+  .hs-cta-group {
+    width: 100%;
+    flex-direction: column;
   }
 
   .hs-photo {
-    height: 330px;
+    height: 280px;
+    border-radius: 18px;
+  }
+
+  .hs-composition-card-back {
+    inset: 10px -8px -8px 10px;
+    border-radius: 20px;
   }
 
   .hs-photo-bottom {
-    left: 10px;
-    bottom: 10px;
-
-    padding: 8px 11px;
-
-    font-size: 9px;
-  }
-
-  .hs-footer {
-    min-height: 48px;
-    font-size: 8px;
+    left: 12px;
+    bottom: 12px;
+    right: 12px;
+    padding: 10px 14px;
   }
 }

@@ -163,6 +163,8 @@ class NotificationCreate(BaseModel):
     title: str
     message: str
     type: str = "Task"
+    priority: Optional[str] = "Medium"
+    target_route: Optional[str] = None
     icon: Optional[str] = "📋"
     status: Optional[str] = "New"
     time: Optional[str] = "Just now"
@@ -249,6 +251,7 @@ class JoinRequestResponse(BaseModel):
     faculty_name: str
     faculty_email: str
     department_id: str
+    department_name: Optional[str] = None
     department_code: str
     status: str
     requested_at: str

@@ -17,6 +17,8 @@ DEFAULT_NOTIFICATIONS = [
         "message": "AI Lab Maintenance task assigned to Mrs. Neha Gurnani",
         "time": "10 minutes ago",
         "type": "Task",
+        "priority": "High",
+        "target_route": "/tasks",
         "icon": "📋",
         "status": "New",
         "is_read": False,
@@ -28,6 +30,8 @@ DEFAULT_NOTIFICATIONS = [
         "message": "Final Year Project Review approval is waiting for review",
         "time": "1 hour ago",
         "type": "Approval",
+        "priority": "High",
+        "target_route": "/approvals",
         "icon": "✅",
         "status": "Pending",
         "is_read": False,
@@ -38,7 +42,9 @@ DEFAULT_NOTIFICATIONS = [
         "title": "Deadline Reminder",
         "message": "Machine Learning Workshop deadline is near",
         "time": "Today",
-        "type": "Reminder",
+        "type": "Calendar",
+        "priority": "Medium",
+        "target_route": "/calendar",
         "icon": "⏰",
         "status": "Important",
         "is_read": False,
@@ -49,7 +55,9 @@ DEFAULT_NOTIFICATIONS = [
         "title": "Faculty Activity Update",
         "message": "Dr. Bhushan Mahendra Manjre updated research tracking status",
         "time": "Today",
-        "type": "Faculty",
+        "type": "Employees",
+        "priority": "Low",
+        "target_route": "/employees",
         "icon": "👨‍🏫",
         "status": "Updated",
         "is_read": True,
@@ -61,6 +69,8 @@ DEFAULT_NOTIFICATIONS = [
         "message": "HieraSync AI suggested completing pending approvals first",
         "time": "Today",
         "type": "AI",
+        "priority": "Medium",
+        "target_route": "/ai",
         "icon": "🤖",
         "status": "AI Alert",
         "is_read": True,
@@ -93,8 +103,25 @@ def get_unread_count(
     if docs:
         unread = sum(1 for d in docs if not d.to_dict().get("is_read", False))
     else:
-        unread = 3  # Default count matching Navbar badge in UI
+        unread = sum(1 for d in DEFAULT_NOTIFICATIONS if not d.get("is_read", False))
     return {"unread_count": unread}
+
+@router.post("/", response_model=NotificationResponse)
+def create_notification(
+    notification: NotificationCreate,
+    db: Client = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    notif_id = f"notif_{uuid.uuid4().hex[:8]}"
+    db_notif = notification.dict()
+    db_notif["id"] = notif_id
+    db_notif["user_id"] = current_user.id
+    db_notif["created_at"] = datetime.utcnow().isoformat()
+    if not db_notif.get("time"):
+        db_notif["time"] = "Just now"
+    
+    db.collection('notifications').document(notif_id).set(db_notif)
+    return db_notif
 
 @router.put("/{notification_id}/read", response_model=NotificationResponse)
 def mark_read(
@@ -108,10 +135,30 @@ def mark_read(
         for n in DEFAULT_NOTIFICATIONS:
             if n["id"] == notification_id:
                 n["is_read"] = True
+                n["status"] = "Read"
                 return n
         raise HTTPException(status_code=404, detail="Notification not found")
     
-    doc_ref.update({"is_read": True})
+    doc_ref.update({"is_read": True, "status": "Read"})
+    return doc_ref.get().to_dict()
+
+@router.put("/{notification_id}/unread", response_model=NotificationResponse)
+def mark_unread(
+    notification_id: str,
+    db: Client = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    doc_ref = db.collection('notifications').document(notification_id)
+    doc = doc_ref.get()
+    if not doc.exists:
+        for n in DEFAULT_NOTIFICATIONS:
+            if n["id"] == notification_id:
+                n["is_read"] = False
+                n["status"] = "Unread"
+                return n
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    doc_ref.update({"is_read": False, "status": "Unread"})
     return doc_ref.get().to_dict()
 
 @router.put("/read-all")
@@ -121,6 +168,31 @@ def mark_all_read(
 ):
     notifs_ref = db.collection('notifications')
     docs = list(notifs_ref.where('user_id', 'in', [current_user.id, 'department']).stream())
-    for doc in docs:
-        doc.reference.update({"is_read": True})
+    if docs:
+        for doc in docs:
+            doc.reference.update({"is_read": True, "status": "Read"})
+    else:
+        for n in DEFAULT_NOTIFICATIONS:
+            n["is_read"] = True
+            n["status"] = "Read"
     return {"message": "All notifications marked as read."}
+
+@router.delete("/{notification_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_notification(
+    notification_id: str,
+    db: Client = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    doc_ref = db.collection('notifications').document(notification_id)
+    if doc_ref.get().exists:
+        doc_ref.delete()
+        return None
+    
+    # Check default notifications
+    global DEFAULT_NOTIFICATIONS
+    for i, n in enumerate(DEFAULT_NOTIFICATIONS):
+        if n["id"] == notification_id:
+            DEFAULT_NOTIFICATIONS.pop(i)
+            return None
+            
+    raise HTTPException(status_code=404, detail="Notification not found")

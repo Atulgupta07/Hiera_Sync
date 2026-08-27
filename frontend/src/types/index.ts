@@ -20,6 +20,7 @@ export interface UserResponse extends UserBase {
 export interface LoginRequest {
   email: string;
   password?: string;
+  rememberMe?: boolean;
 }
 
 export interface ForgotPasswordRequest {
@@ -155,6 +156,8 @@ export interface NotificationCreate {
   title: string;
   message: string;
   type?: string;
+  priority?: string;
+  target_route?: string;
   icon?: string;
   status?: string;
   time?: string;

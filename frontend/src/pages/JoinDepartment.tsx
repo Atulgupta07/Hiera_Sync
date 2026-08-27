@@ -1,22 +1,53 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { joinApi, JoinRequestResponse } from "../api/join";
+import { departmentsApi, DepartmentResponse } from "../api/departments";
 import { useAuth } from "../contexts/AuthContext";
-import { Building2, Send, Clock, CheckCircle, XCircle } from "lucide-react";
+import {
+  Building2,
+  Send,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  ArrowRight,
+  RotateCw,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+
+import "./JoinDepartment.css";
 
 export default function JoinDepartment() {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, refreshUser } = useAuth();
+
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<JoinRequestResponse | null>(null);
+  const [department, setDepartment] = useState<DepartmentResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
+
+  const isUserActive = user?.status === "ACTIVE" && Boolean(user?.department_id);
 
   const fetchStatus = async () => {
     try {
-      const res = await joinApi.getStatus();
-      setStatus(res);
+      const [statusRes, deptRes] = await Promise.all([
+        joinApi.getStatus(),
+        departmentsApi.getMine().catch(() => null),
+      ]);
+      setStatus(statusRes);
+      if (deptRes) {
+        setDepartment(deptRes);
+      }
+
+      // If the backend has approved the request or user is active, sync user profile
+      if (statusRes?.status === "Approved") {
+        await refreshUser();
+      }
     } catch (err: any) {
-      console.error(err);
+      console.error("Error fetching join status:", err);
     } finally {
       setLoading(false);
     }
@@ -26,10 +57,35 @@ export default function JoinDepartment() {
     fetchStatus();
   }, []);
 
+  const handleManualCheck = async () => {
+    setChecking(true);
+    setError("");
+    try {
+      const [statusRes, freshUser] = await Promise.all([
+        joinApi.getStatus(),
+        refreshUser(),
+      ]);
+      setStatus(statusRes);
+      if (statusRes?.status === "Approved" || freshUser?.status === "ACTIVE") {
+        // Automatically navigate to dashboard when approved
+        navigate("/dashboard");
+        setTimeout(() => {
+          if (window.location.pathname.includes("/join-department")) {
+            window.location.href = "/dashboard";
+          }
+        }, 150);
+      }
+    } catch (err: any) {
+      console.error("Check status error:", err);
+    } finally {
+      setTimeout(() => setChecking(false), 500);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!code.trim()) {
-      setError("Please enter a valid code.");
+      setError("Please enter a valid invitation code.");
       return;
     }
     setError("");
@@ -39,83 +95,260 @@ export default function JoinDepartment() {
       setStatus(res);
       setCode("");
     } catch (err: any) {
-      setError(err.message || "Failed to submit request.");
+      setError(err.message || "Failed to submit join request.");
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleOpenWorkspace = async () => {
+    setSubmitting(true);
+    setError("");
+    try {
+      // 1. Refresh user in AuthContext to guarantee ACTIVE status & assigned department_id
+      await refreshUser();
+      
+      // 2. Perform navigation to /dashboard
+      navigate("/dashboard");
+
+      // 3. Fallback ensure navigation occurs cleanly
+      setTimeout(() => {
+        if (window.location.pathname.includes("/join-department")) {
+          window.location.href = "/dashboard";
+        }
+      }, 150);
+    } catch (err: any) {
+      console.error("Error opening workspace:", err);
+      window.location.href = "/dashboard";
+    } finally {
+      setTimeout(() => setSubmitting(false), 600);
+    }
+  };
+
   if (loading) {
-    return <div className="p-8 text-center text-gray-500">Loading...</div>;
+    return (
+      <div className="jd-page">
+        <div className="jd-card text-center">
+          <div className="w-8 h-8 border-3 border-[#6D28D9] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm font-semibold text-[#737373]">Checking department authorization...</p>
+        </div>
+      </div>
+    );
   }
 
-  // The ProtectedRoute handles access control. If they are here, they need to submit a join request or wait for approval.
-  return (
-    <div className="p-8 max-w-2xl mx-auto mt-10">
-      <div className="bg-white rounded-3xl shadow-lg p-8">
-        <div className="flex justify-center mb-6">
-          <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600">
-            <Building2 size={32} />
+  // Case 1: User is already an active member or request is approved
+  if (isUserActive || status?.status === "Approved") {
+    return (
+      <div className="jd-page">
+        <div className="jd-ambient-glow jd-glow-1" />
+        <div className="jd-ambient-glow jd-glow-2" />
+
+        <div className="jd-card">
+          <div className="jd-icon-wrapper approved">
+            <CheckCircle2 size={32} />
+          </div>
+
+          <h1 className="jd-title">
+            {isUserActive ? "Department Membership Active" : "Join Request Approved!"}
+          </h1>
+
+          <p className="jd-subtitle">
+            You are now an authorized faculty member with full access to the department workspace.
+          </p>
+
+          <div className="jd-status-box approved">
+            <div className="jd-status-header">
+              <span className="jd-status-tag">
+                <CheckCircle2 size={18} />
+                <span>Authorized Member</span>
+              </span>
+              <span className="px-2.5 py-1 rounded-full bg-[#D1FAE5] text-[#065F46] text-xs font-bold uppercase">
+                Active
+              </span>
+            </div>
+
+            <p className="jd-status-desc">
+              Department: <strong>{department?.name || status?.department_name || "Machinelearning"}</strong>
+              <br />
+              Institution: <strong>SBJIT Nagpur</strong>
+            </p>
+
+            <div className="jd-meta-details">
+              <span>Department Code: <strong>{department?.code || status?.department_code || "8FTEOOCV"}</strong></span>
+              <span>•</span>
+              <span>Access Level: <strong>Faculty Workspace</strong></span>
+            </div>
+          </div>
+
+          {error && (
+            <div className="jd-error-banner mb-4">
+              <span>{error}</span>
+            </div>
+          )}
+
+          <button
+            onClick={handleOpenWorkspace}
+            disabled={submitting}
+            className="jd-btn-primary emerald"
+          >
+            {submitting ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Opening Department Workspace...</span>
+              </>
+            ) : (
+              <>
+                <span>Open Department Workspace</span>
+                <ArrowRight size={18} />
+              </>
+            )}
+          </button>
+
+          <div className="jd-footer-info">
+            <ShieldCheck size={14} />
+            <span>HiéraSync AI • SBJIT Nagpur • Secure Access</span>
           </div>
         </div>
-        
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">Join Department</h1>
-        <p className="text-center text-gray-500 mb-8">
-          Enter the unique invitation code provided by your Head of Department.
+      </div>
+    );
+  }
+
+  // Case 2: Request is Pending
+  if (status?.status === "Pending") {
+    return (
+      <div className="jd-page">
+        <div className="jd-ambient-glow jd-glow-1" />
+        <div className="jd-ambient-glow jd-glow-2" />
+
+        <div className="jd-card">
+          <div className="jd-icon-wrapper pending">
+            <Clock size={32} />
+          </div>
+
+          <h1 className="jd-title">Request Pending Approval</h1>
+
+          <p className="jd-subtitle">
+            Your department join request has been submitted and is currently waiting for review by the Head of Department.
+          </p>
+
+          <div className="jd-status-box pending">
+            <div className="jd-status-header">
+              <span className="jd-status-tag">
+                <Clock size={18} />
+                <span>Under Review</span>
+              </span>
+              <span className="px-2.5 py-1 rounded-full bg-[#FEF3C7] text-[#92400E] text-xs font-bold uppercase">
+                Pending
+              </span>
+            </div>
+
+            <p className="jd-status-desc">
+              You requested to join department code <strong>{status.department_code}</strong>
+              {status.department_name && <> ({status.department_name})</>}.
+            </p>
+
+            <div className="jd-meta-details">
+              <span>Submitted: {new Date(status.requested_at).toLocaleDateString()}</span>
+              <span>•</span>
+              <span>Reviewer: Department Administrator / HOD</span>
+            </div>
+          </div>
+
+          <button
+            onClick={handleManualCheck}
+            disabled={checking}
+            className={`jd-btn-secondary ${checking ? "spinning" : ""}`}
+          >
+            <RotateCw size={16} />
+            <span>{checking ? "Checking Status..." : "Check Status / Refresh"}</span>
+          </button>
+
+          <div className="jd-footer-info">
+            <Sparkles size={14} />
+            <span>Administrator will be notified automatically upon submission</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Case 3: Request Rejected or No Request (Show Invitation Form)
+  return (
+    <div className="jd-page">
+      <div className="jd-ambient-glow jd-glow-1" />
+      <div className="jd-ambient-glow jd-glow-2" />
+
+      <div className="jd-card">
+        <div className="jd-icon-wrapper">
+          <Building2 size={32} />
+        </div>
+
+        <h1 className="jd-title">Join Department</h1>
+
+        <p className="jd-subtitle">
+          Enter the unique department invitation code provided by your Head of Department or Administrator.
         </p>
 
-        {status && (
-          <div className={`p-6 rounded-2xl mb-8 border ${
-            status.status === 'Pending' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
-            status.status === 'Approved' ? 'bg-green-50 border-green-200 text-green-800' :
-            'bg-red-50 border-red-200 text-red-800'
-          }`}>
-            <h3 className="text-lg font-bold flex items-center gap-2 mb-2">
-              {status.status === 'Pending' && <Clock className="w-5 h-5" />}
-              {status.status === 'Approved' && <CheckCircle className="w-5 h-5" />}
-              {status.status === 'Rejected' && <XCircle className="w-5 h-5" />}
-              Request {status.status}
-            </h3>
-            <p className="text-sm">
-              You requested to join department <b>{status.department_code}</b> on {new Date(status.requested_at).toLocaleDateString()}.
+        {status?.status === "Rejected" && (
+          <div className="jd-status-box rejected">
+            <div className="jd-status-header">
+              <span className="jd-status-tag">
+                <XCircle size={18} />
+                <span>Request Not Approved</span>
+              </span>
+            </div>
+            <p className="jd-status-desc">
+              Your previous join request for code <strong>{status.department_code}</strong> was rejected. Please verify the code with your HOD and submit a new request below.
             </p>
-            {status.status === 'Rejected' && (
-              <p className="mt-4 text-xs font-semibold">You can submit a new request if needed.</p>
-            )}
           </div>
         )}
 
-        {(!status || status.status === 'Rejected') && (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm border border-red-100">
-                {error}
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Invitation Code
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. AIML2026"
-                value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                className="w-full border-2 border-gray-200 rounded-xl p-4 uppercase tracking-widest text-lg font-bold text-center outline-none focus:border-blue-500 transition-colors"
-                maxLength={10}
-              />
-            </div>
-            
-            <button
-              type="submit"
-              disabled={submitting || !code.trim()}
-              className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition flex justify-center items-center gap-2 disabled:opacity-50"
-            >
-              {submitting ? 'Submitting...' : 'Submit Request'}
-              <Send size={18} />
-            </button>
-          </form>
+        {error && (
+          <div className="jd-error-banner mb-4">
+            <span>{error}</span>
+          </div>
         )}
+
+        <form onSubmit={handleSubmit} className="jd-form">
+          <div>
+            <label htmlFor="invitation-code" className="jd-input-label">
+              Department Invitation Code
+            </label>
+            <input
+              id="invitation-code"
+              type="text"
+              placeholder="e.g. 8FTEOOCV"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              maxLength={12}
+              required
+              className="jd-code-input"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting || !code.trim()}
+            className="jd-btn-primary"
+          >
+            {submitting ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Submitting Request...</span>
+              </>
+            ) : (
+              <>
+                <span>Submit Join Request</span>
+                <Send size={18} />
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="jd-footer-info">
+          <ShieldCheck size={14} />
+          <span>SBJIT Nagpur • Academic Governance Portal</span>
+        </div>
       </div>
     </div>
   );

@@ -62,10 +62,9 @@ export default function CalendarPage() {
     useState<EventResponse | null>(null);
 
   const [selectedDate, setSelectedDate] = useState("");
-
   const [deleting, setDeleting] = useState(false);
 
-  const [aiMessage, setAiMessage] = useState(
+  const [, setAiMessage] = useState(
     "Your academic schedule is organized. I can help identify upcoming deadlines and overloaded days."
   );
 
@@ -93,7 +92,7 @@ export default function CalendarPage() {
 
   /* =========================================================
      LOAD CALENDAR
-     ========================================================= */
+  ========================================================= */
 
   const loadCalendar = async () => {
     try {
@@ -126,9 +125,9 @@ export default function CalendarPage() {
 
   /* =========================================================
      CREATE MODAL
-     ========================================================= */
+  ========================================================= */
 
-  const openCreateModal = (date?: string) => {
+  const openCreateModal = (date = "") => {
     if (!isHodOrAdmin) {
       alert(
         "Only HOD / Administrator can create department activities."
@@ -136,29 +135,23 @@ export default function CalendarPage() {
       return;
     }
 
-    const activityDate = date || "";
-
-    setSelectedDate(activityDate);
+    setSelectedDate(date);
 
     setForm({
       ...emptyForm,
-      date: activityDate,
+      date,
     });
 
     setShowCreate(true);
   };
 
   const handleDateClick = (info: any) => {
-    const clickedDate = info.dateStr;
-
-    setSelectedDate(clickedDate);
-
-    openCreateModal(clickedDate);
+    openCreateModal(info.dateStr);
   };
 
   /* =========================================================
      EVENT CLICK
-     ========================================================= */
+  ========================================================= */
 
   const handleEventClick = (info: any) => {
     const id = String(info.event.id);
@@ -174,7 +167,7 @@ export default function CalendarPage() {
 
   /* =========================================================
      CREATE ACTIVITY
-     ========================================================= */
+  ========================================================= */
 
   const handleCreate = async () => {
     if (!form.title.trim()) {
@@ -194,12 +187,12 @@ export default function CalendarPage() {
 
     try {
       const created = await eventsApi.create({
-        title: form.title,
+        title: form.title.trim(),
         date: form.date,
         type: form.type,
         person: form.person,
-        description: form.description,
-        location: form.location,
+        description: form.description.trim(),
+        location: form.location.trim(),
       });
 
       setEvents((previous) => [...previous, created]);
@@ -218,7 +211,7 @@ export default function CalendarPage() {
 
   /* =========================================================
      DELETE ACTIVITY
-     ========================================================= */
+  ========================================================= */
 
   const handleDelete = async () => {
     if (!selectedEvent) return;
@@ -234,9 +227,7 @@ export default function CalendarPage() {
       `Are you sure you want to delete "${selectedEvent.title}"?\n\nThis action cannot be undone.`
     );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     try {
       setDeleting(true);
@@ -266,53 +257,56 @@ export default function CalendarPage() {
 
   /* =========================================================
      CALENDAR EVENTS
-     ========================================================= */
+  ========================================================= */
 
-  const calendarEvents = events.map((event) => ({
-    id: String(event.id),
-    title: event.title,
-    start: event.date,
+  const calendarEvents = events.map((event) => {
+    const type =
+      (event.type as ActivityType) || "Academic";
 
-    classNames: [
-      "hiera-calendar-event",
-      typeClass[
-        (event.type as ActivityType) || "Academic"
+    return {
+      id: String(event.id),
+      title: event.title,
+      start: event.date,
+
+      classNames: [
+        "hiera-calendar-event",
+        typeClass[type] || "academic",
       ],
-    ],
 
-    extendedProps: {
-      type: event.type,
-      person: event.person,
-      description: event.description,
-      location: event.location,
-    },
-  }));
+      extendedProps: {
+        type: event.type,
+        person: event.person,
+        description: event.description,
+        location: event.location,
+      },
+    };
+  });
 
   /* =========================================================
      STATISTICS
-     ========================================================= */
+  ========================================================= */
 
   const totalEvents = events.length;
 
   const academicCount = events.filter(
-    (e) => e.type === "Academic"
+    (event) => event.type === "Academic"
   ).length;
 
   const meetingCount = events.filter(
-    (e) => e.type === "Meeting"
+    (event) => event.type === "Meeting"
   ).length;
 
   const workshopCount = events.filter(
-    (e) => e.type === "Workshop"
+    (event) => event.type === "Workshop"
   ).length;
 
   const researchCount = events.filter(
-    (e) => e.type === "Research"
+    (event) => event.type === "Research"
   ).length;
 
   /* =========================================================
      UPCOMING EVENTS
-     ========================================================= */
+  ========================================================= */
 
   const upcomingEvents = [...events]
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -320,7 +314,7 @@ export default function CalendarPage() {
 
   /* =========================================================
      DATE FORMAT
-     ========================================================= */
+  ========================================================= */
 
   const formatDate = (date?: string) => {
     if (!date) return "-";
@@ -335,15 +329,23 @@ export default function CalendarPage() {
   };
 
   /* =========================================================
+     CLOSE CREATE MODAL
+  ========================================================= */
+
+  const closeCreateModal = () => {
+    setShowCreate(false);
+    setForm(emptyForm);
+    setSelectedDate("");
+  };
+
+  /* =========================================================
      UI
-     ========================================================= */
+  ========================================================= */
 
   return (
     <div className="calendar-page">
 
-      {/* =====================================================
-          HEADER
-      ===================================================== */}
+      {/* HEADER */}
 
       <div className="calendar-header">
 
@@ -368,6 +370,7 @@ export default function CalendarPage() {
             </p>
 
           </div>
+
         </div>
 
         <div className="header-actions">
@@ -391,11 +394,10 @@ export default function CalendarPage() {
           )}
 
         </div>
+
       </div>
 
-      {/* =====================================================
-          ERROR
-      ===================================================== */}
+      {/* ERROR */}
 
       {error && (
         <div className="calendar-error">
@@ -412,9 +414,7 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {/* =====================================================
-          STATS
-      ===================================================== */}
+      {/* STATS */}
 
       <div className="calendar-stats">
 
@@ -480,15 +480,11 @@ export default function CalendarPage() {
 
       </div>
 
-      {/* =====================================================
-          MAIN LAYOUT
-      ===================================================== */}
+      {/* MAIN LAYOUT */}
 
       <div className="calendar-layout">
 
-        {/* ===================================================
-            CALENDAR
-        =================================================== */}
+        {/* CALENDAR */}
 
         <section className="calendar-card">
 
@@ -564,7 +560,6 @@ export default function CalendarPage() {
                 events={calendarEvents}
                 dateClick={handleDateClick}
                 eventClick={handleEventClick}
-
                 dayCellClassNames={(info) => {
                   const date = info.date
                     .toISOString()
@@ -574,19 +569,16 @@ export default function CalendarPage() {
                     ? ["fc-day-selected"]
                     : [];
                 }}
-
                 dayMaxEvents={3}
                 eventDisplay="block"
                 fixedWeekCount={false}
                 showNonCurrentDates={true}
-
                 headerToolbar={{
                   left: "prev,next today",
                   center: "title",
                   right:
                     "dayGridMonth,timeGridWeek,timeGridDay",
                 }}
-
                 buttonText={{
                   today: "Today",
                   month: "Month",
@@ -600,9 +592,7 @@ export default function CalendarPage() {
 
         </section>
 
-        {/* ===================================================
-            SIDEBAR
-        =================================================== */}
+        {/* SIDEBAR */}
 
         <aside className="calendar-sidebar">
 
@@ -691,10 +681,10 @@ export default function CalendarPage() {
 
                       <div
                         className={`upcoming-icon ${
-                          typeClass[type]
+                          typeClass[type] || "academic"
                         }`}
                       >
-                        {typeIcons[type]}
+                        {typeIcons[type] || "📚"}
                       </div>
 
                       <div className="upcoming-content">
@@ -730,59 +720,19 @@ export default function CalendarPage() {
 
           </div>
 
-          {/* AI */}
-
-          <div className="ai-card">
-
-            <div className="ai-top">
-
-              <div className="ai-icon">
-                ✦
-              </div>
-
-              <div>
-
-                <div className="section-kicker">
-                  HIERASYNC AI
-                </div>
-
-                <h3>
-                  Smart Academic Planning
-                </h3>
-
-              </div>
-
-            </div>
-
-            <p>
-              {aiMessage}
-            </p>
-
-            <div className="ai-status">
-
-              <span />
-
-              AI Calendar Assistant Active
-
-            </div>
-
-          </div>
+         
 
         </aside>
 
       </div>
 
-      {/* =====================================================
-          CREATE MODAL
-      ===================================================== */}
+      {/* CREATE MODAL */}
 
       {showCreate && (
 
         <div
           className="modal-overlay"
-          onMouseDown={() =>
-            setShowCreate(false)
-          }
+          onMouseDown={closeCreateModal}
         >
 
           <div
@@ -812,9 +762,7 @@ export default function CalendarPage() {
 
               <button
                 className="close-btn"
-                onClick={() =>
-                  setShowCreate(false)
-                }
+                onClick={closeCreateModal}
               >
                 ×
               </button>
@@ -836,6 +784,7 @@ export default function CalendarPage() {
                   }
                   placeholder="e.g. Final Year Project Review"
                 />
+
               </label>
 
               <label>
@@ -851,6 +800,7 @@ export default function CalendarPage() {
                     })
                   }
                 />
+
               </label>
 
               <label>
@@ -866,13 +816,26 @@ export default function CalendarPage() {
                     })
                   }
                 >
-                  <option>Academic</option>
-                  <option>Meeting</option>
-                  <option>Workshop</option>
-                  <option>
+                  <option value="Academic">
+                    Academic
+                  </option>
+
+                  <option value="Meeting">
+                    Meeting
+                  </option>
+
+                  <option value="Workshop">
+                    Workshop
+                  </option>
+
+                  <option value="Department Activity">
                     Department Activity
                   </option>
-                  <option>Research</option>
+
+                  <option value="Research">
+                    Research
+                  </option>
+
                 </select>
 
               </label>
@@ -948,9 +911,7 @@ export default function CalendarPage() {
 
               <button
                 className="secondary-btn"
-                onClick={() =>
-                  setShowCreate(false)
-                }
+                onClick={closeCreateModal}
               >
                 Cancel
               </button>
@@ -970,9 +931,7 @@ export default function CalendarPage() {
 
       )}
 
-      {/* =====================================================
-          EVENT DETAILS + DELETE
-      ===================================================== */}
+      {/* EVENT DETAILS */}
 
       {selectedEvent && (
 
@@ -990,14 +949,12 @@ export default function CalendarPage() {
             }
           >
 
-            {/* DETAILS BANNER */}
-
             <div
               className={`details-banner ${
                 typeClass[
                   (selectedEvent.type as ActivityType) ||
                     "Academic"
-                ]
+                ] || "academic"
               }`}
             >
 
@@ -1006,7 +963,7 @@ export default function CalendarPage() {
                   typeIcons[
                     (selectedEvent.type as ActivityType) ||
                       "Academic"
-                  ]
+                  ] || "📚"
                 }
               </span>
 
@@ -1021,8 +978,6 @@ export default function CalendarPage() {
               </button>
 
             </div>
-
-            {/* DETAILS BODY */}
 
             <div className="details-body">
 
@@ -1065,7 +1020,7 @@ export default function CalendarPage() {
                   </small>
 
                   <strong>
-                    {selectedEvent.person}
+                    {selectedEvent.person || "-"}
                   </strong>
 
                 </div>
@@ -1136,8 +1091,6 @@ export default function CalendarPage() {
 
               </div>
 
-              {/* DELETE BUTTON */}
-
               {isHodOrAdmin && (
 
                 <div className="delete-section">
@@ -1155,8 +1108,7 @@ export default function CalendarPage() {
                       </>
                     ) : (
                       <>
-                        🗑
-                        Delete Activity
+                        🗑 Delete Activity
                       </>
                     )}
 
