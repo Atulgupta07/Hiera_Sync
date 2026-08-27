@@ -73,6 +73,11 @@ const CreateDepartment = lazy(
   () => import("./pages/CreateDepartment")
 );
 
+const AIAssistantPage = lazy(
+  () => import("./pages/AIAssistantPage")
+);
+
+
 
 /* =====================================================
    LANDING PAGE — PREMIUM REDESIGN
@@ -258,6 +263,12 @@ function App() {
                     path="/dashboard"
                     element={<Dashboard />}
                   />
+
+                  <Route
+                    path="/ai"
+                    element={<AIAssistantPage />}
+                  />
+
 
                   <Route
                     path="/employees"
