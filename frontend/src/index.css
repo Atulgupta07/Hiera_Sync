@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+@layer base {
+  html {
+    font-size: 18px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+}
+
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -10,8 +19,10 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #f8fafc; /* Tailwind slate-50 base neutral canvas */
-  color: #1e293b; /* slate-800 text */
+  background-color: #f8fafc;
+  /* Tailwind slate-50 base neutral canvas */
+  color: #1e293b;
+  /* slate-800 text */
 }
 
 #root {
@@ -25,7 +36,7 @@ body {
   --fc-neutral-bg-color: #1f2937;
   --fc-neutral-text-color: #9ca3af;
   --fc-border-color: #374151;
-  
+
   --fc-button-text-color: #fff;
   --fc-button-bg-color: #2563eb;
   --fc-button-border-color: #2563eb;
@@ -38,18 +49,21 @@ body {
   --fc-event-border-color: #2563eb;
   --fc-event-text-color: #fff;
   --fc-event-selected-overlay-color: rgba(0, 0, 0, 0.25);
-  
+
   --fc-today-bg-color: rgba(59, 130, 246, 0.1);
   --fc-now-indicator-color: #ef4444;
 }
 
-.fc-theme-standard td, .fc-theme-standard th {
+.fc-theme-standard td,
+.fc-theme-standard th {
   border-color: var(--fc-border-color);
 }
+
 .fc-theme-standard .fc-scrollgrid {
   border-color: var(--fc-border-color);
 }
-.fc .fc-col-header-cell-cushion, .fc .fc-daygrid-day-number {
+
+.fc .fc-col-header-cell-cushion,
+.fc .fc-daygrid-day-number {
   color: #e5e7eb;
 }
-
