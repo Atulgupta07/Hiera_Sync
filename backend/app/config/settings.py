@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+
 
     class Config:
         env_file = ".env"
