@@ -21,62 +21,75 @@ export default function Sidebar() {
   let menu: any[] = [];
   
   if (user?.status === "ACTIVE") {
-    menu = [
+    const isHodOrAdmin = user.role === "ADMIN" || user.role === "HOD";
+    
+    const allMenu = [
       {
         name: "Dashboard",
         path: "/dashboard",
         icon: <FaHome className="w-4 h-4" />,
-        badge: null
+        badge: null,
+        roles: ["ADMIN", "HOD", "FACULTY"]
       },
       {
         name: "AI Assistant",
         path: "/ai",
         icon: <FaRobot className="w-4 h-4" />,
-        badge: "AI"
+        badge: "AI",
+        roles: ["ADMIN", "HOD", "FACULTY"]
       },
       {
         name: "Employees",
         path: "/employees",
         icon: <FaUsers className="w-4 h-4" />,
-        badge: null
+        badge: null,
+        roles: ["ADMIN", "HOD"]
       },
       {
-        name: "Tasks",
+        name: isHodOrAdmin ? "Tasks" : "My Tasks",
         path: "/tasks",
         icon: <FaTasks className="w-4 h-4" />,
-        badge: "1"
+        badge: "1",
+        roles: ["ADMIN", "HOD", "FACULTY"]
       },
       {
         name: "Notifications",
         path: "/notifications",
         icon: <FaBell className="w-4 h-4" />,
-        badge: unreadCount > 0 ? `${unreadCount}` : null
+        badge: unreadCount > 0 ? `${unreadCount}` : null,
+        roles: ["ADMIN", "HOD", "FACULTY"]
       },
       {
         name: "Calendar",
         path: "/calendar",
         icon: <FaCalendarAlt className="w-4 h-4" />,
-        badge: null
+        badge: null,
+        roles: ["ADMIN", "HOD", "FACULTY"]
       },
       {
         name: "Approvals",
         path: "/approvals",
         icon: <FaClipboardCheck className="w-4 h-4" />,
-        badge: "9"
+        badge: "9",
+        roles: ["ADMIN", "HOD"]
       },
       {
         name: "Reports",
         path: "/reports",
         icon: <FaChartBar className="w-4 h-4" />,
-        badge: null
+        badge: null,
+        roles: ["ADMIN", "HOD"]
       },
       {
         name: "Settings",
         path: "/settings",
         icon: <FaCog className="w-4 h-4" />,
-        badge: null
+        badge: null,
+        roles: ["ADMIN", "HOD", "FACULTY"]
       }
     ];
+
+    menu = allMenu.filter(item => item.roles.includes(user.role));
   } else {
     // Pending users can only see Join/Create Dept
     if (user?.role === "ADMIN" || user?.role === "HOD") {

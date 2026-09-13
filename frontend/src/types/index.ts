@@ -109,6 +109,12 @@ export interface EventResponse extends EventCreate {
   created_at?: string;
 }
 
+export interface Subtask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
 export interface TaskCreate {
   title: string;
   assigned: string;
@@ -116,6 +122,15 @@ export interface TaskCreate {
   priority?: string;
   status?: string;
   progress?: string;
+  description?: string;
+  category?: string;
+  start_date?: string;
+  deadline_time?: string;
+  estimated_effort?: string;
+  reminder?: string;
+  require_approval?: boolean;
+  assigned_id?: string;
+  subtasks?: Subtask[];
 }
 
 export interface TaskUpdate {
@@ -125,11 +140,23 @@ export interface TaskUpdate {
   priority?: string;
   status?: string;
   progress?: string;
+  description?: string;
+  category?: string;
+  start_date?: string;
+  deadline_time?: string;
+  estimated_effort?: string;
+  reminder?: string;
+  require_approval?: boolean;
+  assigned_id?: string;
+  subtasks?: Subtask[];
 }
 
 export interface TaskResponse extends TaskCreate {
   id: string;
   created_at?: string;
+  risk_score?: number;
+  risk_level?: "LOW" | "MEDIUM" | "HIGH";
+  risk_factors?: string[];
 }
 
 export interface ApprovalCreate {

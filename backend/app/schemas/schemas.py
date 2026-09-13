@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
 from app.models.models import RoleEnum, PriorityEnum, TaskStatusEnum
@@ -114,6 +114,11 @@ class EventResponse(EventCreate):
         from_attributes = True
 
 # Task Schemas
+class Subtask(BaseModel):
+    id: str
+    title: str
+    completed: bool = False
+
 class TaskCreate(BaseModel):
     title: str
     assigned: str
@@ -121,6 +126,15 @@ class TaskCreate(BaseModel):
     priority: str = "High"
     status: Optional[str] = "Pending"
     progress: Optional[str] = "0%"
+    description: Optional[str] = None
+    category: Optional[str] = "General"
+    start_date: Optional[str] = None
+    deadline_time: Optional[str] = None
+    estimated_effort: Optional[str] = None
+    reminder: Optional[str] = None
+    require_approval: Optional[bool] = False
+    assigned_id: Optional[str] = None
+    subtasks: List[Subtask] = Field(default_factory=list)
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
@@ -129,10 +143,22 @@ class TaskUpdate(BaseModel):
     priority: Optional[str] = None
     status: Optional[str] = None
     progress: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    start_date: Optional[str] = None
+    deadline_time: Optional[str] = None
+    estimated_effort: Optional[str] = None
+    reminder: Optional[str] = None
+    require_approval: Optional[bool] = None
+    assigned_id: Optional[str] = None
+    subtasks: Optional[List[Subtask]] = None
 
 class TaskResponse(TaskCreate):
     id: str
     created_at: Optional[str] = None
+    risk_score: Optional[int] = None
+    risk_level: Optional[str] = None
+    risk_factors: Optional[List[str]] = Field(default_factory=list)
 
     class Config:
         from_attributes = True

@@ -162,15 +162,71 @@ def get_ai_dashboard_summary(
     db: Client = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    from app.api.v1.tasks import calculate_task_risk, DEFAULT_TASKS
+    
+    tasks_ref = db.collection('tasks')
+    docs = list(tasks_ref.stream())
+    all_raw_tasks = [doc.to_dict() for doc in docs] if docs else DEFAULT_TASKS
+    
+    # Precompute faculty workload
+    workload_map = {}
+    for t in all_raw_tasks:
+        if t.get("status") not in ["Completed", "Awaiting Approval"]:
+            assignee = t.get("assigned_id") or t.get("assigned")
+            if assignee:
+                workload_map[assignee] = workload_map.get(assignee, 0) + 1
+                
+    # Filter for user and calculate risk
+    my_tasks = []
+    department_tasks = []
+    for data in all_raw_tasks:
+        assignee_key = data.get("assigned_id") or data.get("assigned")
+        workload = workload_map.get(assignee_key, 0)
+        data = calculate_task_risk(data, workload)
+        
+        department_tasks.append(data)
+        
+        if data.get("assigned_id") == current_user.id or current_user.name.lower() in data.get("assigned", "").lower():
+            my_tasks.append(data)
+            
+    insights = []
+    
+    if current_user.role in [RoleEnum.ADMIN, RoleEnum.HOD]:
+        # HOD Action Center
+        high_risk_tasks = [t for t in department_tasks if t.get("risk_level") == "HIGH"]
+        approvals = [t for t in department_tasks if t.get("status") == "Awaiting Approval"]
+        
+        if high_risk_tasks:
+            insights.append(f"🔴 Deadline Risk: {len(high_risk_tasks)} department tasks have a HIGH risk of delay.")
+        else:
+            insights.append(f"🟢 Deadline Risk: All tasks are on track.")
+            
+        overloaded = [f for f, w in workload_map.items() if w > 3]
+        if overloaded:
+            insights.append(f"👨‍🏫 Workload: {len(overloaded)} faculty members are currently overloaded (>3 tasks).")
+            
+        if approvals:
+            insights.append(f"✅ Approval: {len(approvals)} completed tasks need your review.")
+            
+    else:
+        # Teacher: Today's Priority
+        high_risk = [t for t in my_tasks if t.get("risk_level") == "HIGH" and t.get("status") not in ["Completed", "Awaiting Approval"]]
+        if high_risk:
+            insights.append(f"🔴 Priority: '{high_risk[0].get('title')}' is at HIGH risk (Score: {high_risk[0].get('risk_score')}%). Focus on this first.")
+        else:
+            insights.append("🟢 Priority: Your active tasks are on track.")
+            
+        approvals = [t for t in my_tasks if t.get("status") == "Awaiting Approval"]
+        if approvals:
+            insights.append(f"✅ Approval: {len(approvals)} of your tasks are awaiting HOD review.")
+            
+        workload = workload_map.get(current_user.id) or workload_map.get(current_user.name) or len(my_tasks)
+        insights.append(f"👨‍🏫 Workload: You have {workload} active tasks.")
+
     return {
-        "greeting": f"Good Morning, {current_user.name} 👋",
-        "insights": [
-            "⚡ 2 Tasks may miss deadline",
-            "📅 Meeting with HOD at 3 PM",
-            "📈 Productivity Score : 92%",
-            "✅ Complete pending approvals first"
-        ],
-        "productivity_score": "92%"
+        "greeting": f"Good Morning, {current_user.name}",
+        "insights": insights,
+        "productivity_score": "95%"
     }
 
 
