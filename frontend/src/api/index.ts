@@ -10,3 +10,8 @@ export * from './notifications';
 export * from './misc';
 export * from './departments';
 export * from './join';
+export * from './analytics';
+export * from './requests';
+export * from './comments';
+export * from './attachments';
+export * from './goals';

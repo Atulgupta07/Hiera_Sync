@@ -114,6 +114,111 @@ class EventResponse(EventCreate):
         from_attributes = True
 
 # Task Schemas
+class TaskRequestBase(BaseModel):
+    title: str
+    description: str
+    category: str = "General"
+    priority: str = "Medium"
+    suggested_deadline: str
+    estimated_effort: Optional[str] = None
+    additional_notes: Optional[str] = None
+
+class TaskRequestCreate(TaskRequestBase):
+    pass
+
+class TaskRequestUpdate(BaseModel):
+    status: Optional[str] = None # PENDING, APPROVED, REJECTED
+    rejection_reason: Optional[str] = None
+    created_task_id: Optional[str] = None
+
+class TaskRequestResponse(TaskRequestBase):
+    id: str
+    requester_id: str
+    requester_name: str
+    status: str
+    created_at: str
+    reviewed_at: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    rejection_reason: Optional[str] = None
+    created_task_id: Optional[str] = None
+
+class TaskCommentCreate(BaseModel):
+    content: str
+    mentions: List[str] = Field(default_factory=list)
+
+class TaskCommentResponse(TaskCommentCreate):
+    id: str
+    task_id: str
+    author_id: str
+    author_name: str
+    created_at: str
+    updated_at: str
+
+class TaskAttachmentBase(BaseModel):
+    file_name: str
+    file_type: str
+    file_size: int
+
+class TaskAttachmentCreate(TaskAttachmentBase):
+    storage_path: str
+
+class TaskAttachmentResponse(TaskAttachmentCreate):
+    id: str
+    task_id: str
+    uploaded_by: str
+    created_at: str
+
+class GoalMilestoneBase(BaseModel):
+    title: str
+    description: str
+    due_date: str
+    order: int
+    status: str = "PENDING"
+
+class GoalMilestoneCreate(GoalMilestoneBase):
+    pass
+
+class GoalMilestoneUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    due_date: Optional[str] = None
+    order: Optional[int] = None
+    status: Optional[str] = None
+    completed_at: Optional[str] = None
+
+class GoalMilestoneResponse(GoalMilestoneBase):
+    id: str
+    goal_id: str
+    completed_at: Optional[str] = None
+    created_at: str
+    updated_at: str
+
+class DepartmentGoalBase(BaseModel):
+    title: str
+    description: str
+    category: str = "General"
+    start_date: str
+    target_date: str
+    status: str = "NOT_STARTED"
+
+class DepartmentGoalCreate(DepartmentGoalBase):
+    pass
+
+class DepartmentGoalUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    start_date: Optional[str] = None
+    target_date: Optional[str] = None
+    status: Optional[str] = None
+
+class DepartmentGoalResponse(DepartmentGoalBase):
+    id: str
+    owner_id: str
+    created_at: str
+    updated_at: str
+    milestones: List[GoalMilestoneResponse] = Field(default_factory=list)
+
 class Subtask(BaseModel):
     id: str
     title: str
@@ -135,6 +240,7 @@ class TaskCreate(BaseModel):
     require_approval: Optional[bool] = False
     assigned_id: Optional[str] = None
     subtasks: List[Subtask] = Field(default_factory=list)
+    goal_id: Optional[str] = None
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
@@ -152,6 +258,7 @@ class TaskUpdate(BaseModel):
     require_approval: Optional[bool] = None
     assigned_id: Optional[str] = None
     subtasks: Optional[List[Subtask]] = None
+    goal_id: Optional[str] = None
 
 class TaskResponse(TaskCreate):
     id: str
@@ -159,6 +266,8 @@ class TaskResponse(TaskCreate):
     risk_score: Optional[int] = None
     risk_level: Optional[str] = None
     risk_factors: Optional[List[str]] = Field(default_factory=list)
+    comments: Optional[List[TaskCommentResponse]] = Field(default_factory=list)
+    attachments: Optional[List[TaskAttachmentResponse]] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
@@ -214,16 +323,49 @@ class AIChatResponse(BaseModel):
     user: str
     ai: str
 
+class AIPriorityItem(BaseModel):
+    task_id: str
+    title: str
+    priority: str
+    risk_score: int
+    rank: int
+    why: List[str]
+
+class HODActionItem(BaseModel):
+    type: str # CRITICAL, HIGH RISK, APPROVAL, WORKLOAD
+    title: str
+    description: str
+    target_id: Optional[str] = None
+    target_route: Optional[str] = None
+    priority_level: int
+
 class AIDashboardSummaryResponse(BaseModel):
-    greeting: str = "Good Morning, Tanvi 👋"
-    insights: List[str]
-    productivity_score: str = "92%"
+    greeting: str
+    teacher_priorities: Optional[List[AIPriorityItem]] = None
+    hod_actions: Optional[List[HODActionItem]] = None
+    productivity_score: Optional[str] = None
 
 class AIReportResponse(BaseModel):
     title: str = "HieraSync AI Workflow Analysis Report"
     summary: str
     recommendations: List[str]
     generated_at: str
+
+class FacultyPerformance(BaseModel):
+    faculty_id: str
+    faculty_name: str
+    total_tasks: int
+    completed: int
+    on_time: int
+    late: int
+    pending: int
+    overdue: int
+    completion_rate: float
+    on_time_rate: float
+    average_completion_time: Optional[float] = None
+    current_workload: int
+    productivity_score: float
+    productivity_explanation: str
 
 # Settings Schemas
 class UserSettingsResponse(BaseModel):

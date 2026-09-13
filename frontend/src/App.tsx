@@ -45,6 +45,8 @@ const CalendarPage = lazy(
   () => import("./pages/CalendarPage")
 );
 
+const Goals = lazy(() => import('./pages/Goals'));
+const TaskRequests = lazy(() => import('./pages/TaskRequests'));
 const Approvals = lazy(
   () => import("./pages/Approvals")
 );
@@ -285,6 +287,8 @@ function App() {
                     element={<CalendarPage />}
                   />
 
+                  <Route path="/goals" element={<Goals />} />
+                  <Route path="/task-requests" element={<TaskRequests />} />
                   <Route
                     path="/approvals"
                     element={<Approvals />}

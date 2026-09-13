@@ -131,6 +131,7 @@ export interface TaskCreate {
   require_approval?: boolean;
   assigned_id?: string;
   subtasks?: Subtask[];
+  goal_id?: string;
 }
 
 export interface TaskUpdate {
@@ -149,6 +150,7 @@ export interface TaskUpdate {
   require_approval?: boolean;
   assigned_id?: string;
   subtasks?: Subtask[];
+  goal_id?: string;
 }
 
 export interface TaskResponse extends TaskCreate {
@@ -157,6 +159,8 @@ export interface TaskResponse extends TaskCreate {
   risk_score?: number;
   risk_level?: "LOW" | "MEDIUM" | "HIGH";
   risk_factors?: string[];
+  comments?: TaskCommentResponse[];
+  attachments?: TaskAttachmentResponse[];
 }
 
 export interface ApprovalCreate {
@@ -255,4 +259,135 @@ export interface SearchResultItem {
 export interface GlobalSearchResponse {
   query: string;
   results: SearchResultItem[];
+}
+
+
+export interface TaskRequestCreate {
+  title: string;
+  description: string;
+  category?: string;
+  priority?: string;
+  suggested_deadline: string;
+  estimated_effort?: string;
+  additional_notes?: string;
+}
+
+export interface TaskRequestResponse extends TaskRequestCreate {
+  id: string;
+  requester_id: string;
+  requester_name: string;
+  status: string;
+  created_at: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  rejection_reason?: string;
+  created_task_id?: string;
+}
+
+export interface TaskCommentCreate {
+  content: string;
+  mentions: string[];
+}
+
+export interface TaskCommentResponse extends TaskCommentCreate {
+  id: string;
+  task_id: string;
+  author_id: string;
+  author_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TaskAttachmentResponse {
+  id: string;
+  task_id: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  storage_path: string;
+  uploaded_by: string;
+  created_at: string;
+}
+
+export interface GoalMilestoneCreate {
+  title: string;
+  description: string;
+  due_date: string;
+  order: number;
+  status?: string;
+}
+
+export interface GoalMilestoneResponse extends GoalMilestoneCreate {
+  id: string;
+  goal_id: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DepartmentGoalCreate {
+  title: string;
+  description: string;
+  category?: string;
+  start_date: string;
+  target_date: string;
+  status?: string;
+}
+
+export interface DepartmentGoalResponse extends DepartmentGoalCreate {
+  id: string;
+  owner_id: string;
+  created_at: string;
+  updated_at: string;
+  milestones: GoalMilestoneResponse[];
+}
+
+export interface AIPriorityItem {
+  task_id: string;
+  title: string;
+  risk_level: 'HIGH' | 'MEDIUM' | 'LOW';
+  priority_score: number;
+  rank?: number;
+  priority?: string;
+  risk_score?: number;
+  why?: string[];
+  reason: string;
+  suggested_action: string;
+}
+
+export interface HODActionItem {
+  id: string;
+  type: string;
+  title: string;
+  urgency: 'HIGH' | 'MEDIUM' | 'LOW';
+  description: string;
+  target_route: string | null;
+  target_id?: string;
+  priority_level: number;
+}
+
+export interface FacultyPerformance {
+  faculty_id: string;
+  faculty_name: string;
+  total_tasks: number;
+  completed: number;
+  on_time: number;
+  late: number;
+  pending: number;
+  overdue: number;
+  completion_rate: number;
+  on_time_rate: number;
+  average_completion_time: number | null;
+  current_workload: number;
+  productivity_score: number;
+  productivity_explanation: string;
+}
+
+export interface AIDashboardSummaryResponse {
+  department_health_score: number;
+  department_health_trend: string;
+  risk_summary: string;
+  ai_insights: string[];
+  teacher_priorities?: AIPriorityItem[];
+  hod_actions?: HODActionItem[];
 }

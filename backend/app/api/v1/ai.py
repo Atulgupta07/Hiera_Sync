@@ -1,168 +1,64 @@
 import os
-import json
 import urllib.request
-from typing import List, Optional
+import json
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 from fastapi import APIRouter, Depends
 from google.cloud.firestore import Client
 from app.database.session import get_db
-from app.schemas.schemas import AIChatRequest, AIChatResponse, AIDashboardSummaryResponse, AIReportResponse
+from app.schemas.schemas import AIChatRequest, AIChatResponse, AIDashboardSummaryResponse, AIReportResponse, AIPriorityItem, HODActionItem
 from app.auth.permissions import get_current_active_user
-from app.models.models import User
+from app.models.models import User, RoleEnum
 from app.config.settings import settings
 from app.utils.logging import logger
+from app.api.v1.tasks import calculate_task_risk
 
 router = APIRouter()
 
-def query_gemini_api(system_instruction: str, user_prompt: str) -> Optional[str]:
-    """
-    Calls Google Gemini API using GEMINI_API_KEY.
-    Falls back gracefully if key is missing or endpoint is unreachable.
-    """
-    api_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY", "")
-    if not api_key:
-        logger.info("GEMINI_API_KEY not configured. Falling back to dynamic context engine.")
-        return None
-
-    models_to_try = ["gemini-2.5-flash", "gemini-1.5-flash"]
-    
-    for model_name in models_to_try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
-        
-        payload = {
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [
-                        {
-                            "text": f"SYSTEM INSTRUCTION:\n{system_instruction}\n\nUSER PROMPT:\n{user_prompt}"
-                        }
-                    ]
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.4,
-                "maxOutputTokens": 800
-            }
-        }
-
-        try:
-            req_data = json.dumps(payload).encode("utf-8")
-            req = urllib.request.Request(
-                url, 
-                data=req_data, 
-                headers={"Content-Type": "application/json"},
-                method="POST"
-            )
-            with urllib.request.urlopen(req, timeout=12) as response:
-                result = json.loads(response.read().decode("utf-8"))
-                candidates = result.get("candidates", [])
-                if candidates:
-                    parts = candidates[0].get("content", {}).get("parts", [])
-                    if parts:
-                        return parts[0].get("text", "").strip()
-        except Exception as e:
-            logger.warning(f"Gemini API request failed for model {model_name}: {e}")
-            continue
-            
-    return None
-
-
-@router.post("/chat", response_model=AIChatResponse)
-def ai_chat(
-    req: AIChatRequest,
-    db: Client = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    user_prompt = req.message.strip()
-
-    # 1. Fetch live department tasks from Firestore
-    tasks_summary = []
+def get_days_overdue(task: Dict[str, Any]) -> int:
+    deadline_str = task.get("deadline", "")
+    if not deadline_str: return 0
     try:
-        tasks_docs = db.collection('tasks').limit(10).stream()
-        for doc in tasks_docs:
-            t = doc.to_dict()
-            tasks_summary.append(
-                f"• {t.get('title', 'Task')}: Status={t.get('status', 'TODO')}, Priority={t.get('priority', 'MEDIUM')}, Assigned={t.get('assigned', 'Faculty')}"
-            )
-    except Exception as err:
-        logger.error(f"Error fetching tasks for AI context: {err}")
-
-    # 2. Fetch live pending approvals from Firestore
-    approvals_summary = []
-    try:
-        app_docs = db.collection('approvals').limit(10).stream()
-        for doc in app_docs:
-            a = doc.to_dict()
-            approvals_summary.append(
-                f"• {a.get('title', 'Approval')}: Status={a.get('status', 'PENDING')}, Requester={a.get('requested', 'Faculty')}"
-            )
-    except Exception as err:
-        logger.error(f"Error fetching approvals for AI context: {err}")
-
-    # 3. Construct System Instruction
-    system_instruction = f"""
-You are HiéraSync AI, an intelligent, context-aware academic workflow assistant for the CSE (AI & ML) Department at SBJIT Nagpur.
-
-User Information:
-- Name: {current_user.name}
-- Role: {current_user.role} (Valid roles: ADMIN, HOD, FACULTY)
-- Email: {current_user.email}
-- Department: AIML Department (SBJIT Nagpur)
-
-HiéraSync Architecture Context:
-- User Roles: ADMIN (system manager), HOD (department head & approval sign-off), FACULTY (teacher/professor).
-- Core Modules: Dashboard analytics, Task Kanban board, Multi-tier digital approval pipeline, Calendar events, Faculty directory, Automated reporting.
-
-Current Department Active Tasks (Firestore):
-{chr(10).join(tasks_summary) if tasks_summary else "No active tasks recorded."}
-
-Current Department Pending Approvals (Firestore):
-{chr(10).join(approvals_summary) if approvals_summary else "No pending approvals recorded."}
-
-Respond directly, accurately, and professionally to the user's prompt. Keep responses clear and tailored for academic management.
-"""
-
-    # 4. Attempt Gemini API LLM generation
-    reply = query_gemini_api(system_instruction, user_prompt)
-
-    # 5. Smart Context Fallback if Gemini Key is omitted or unreachable
-    if not reply:
-        msg_lower = user_prompt.lower()
-        if "task" in msg_lower or "priority" in msg_lower or "summary" in msg_lower:
-            reply = f"Hi {current_user.name}, HiéraSync AI fetched {len(tasks_summary)} tasks for AIML Department. " + \
-                    ("Top tasks: " + "; ".join(tasks_summary[:2]) if tasks_summary else "All department tasks are updated.")
-        elif "approval" in msg_lower or "pending" in msg_lower:
-            reply = f"There are currently {len(approvals_summary)} approvals in the pipeline. " + \
-                    ("Pending review: " + "; ".join(approvals_summary[:2]) if approvals_summary else "No pending approvals requiring immediate action.")
-        elif "calendar" in msg_lower or "meeting" in msg_lower or "event" in msg_lower:
-            reply = f"Calendar Insights for {current_user.name}: Upcoming department review meetings and workshop deadlines are tracked on your Calendar page."
+        dt = None
+        if "T" in deadline_str or "Z" in deadline_str:
+            dt = datetime.fromisoformat(deadline_str.replace("Z", ""))
         else:
-            reply = f"HiéraSync AI analyzed your query regarding '{user_prompt}' for {current_user.name} ({current_user.role}). All systems in AIML Department at SBJIT Nagpur are operating efficiently."
+            try:
+                dt = datetime.strptime(deadline_str, "%d %B %Y")
+            except ValueError:
+                dt = datetime.strptime(deadline_str, "%Y-%m-%d")
+        if dt:
+            days_left = (dt - datetime.utcnow()).days
+            if days_left < 0:
+                return abs(days_left)
+    except Exception:
+        pass
+    return 0
 
-    # 6. Save chat interaction to Firestore 'ai_chats'
+def get_days_remaining(task: Dict[str, Any]) -> Optional[int]:
+    deadline_str = task.get("deadline", "")
+    if not deadline_str: return None
     try:
-        chat_doc = {
-            "user_id": current_user.id,
-            "user_name": current_user.name,
-            "user_role": current_user.role,
-            "user_message": user_prompt,
-            "ai_response": reply,
-            "created_at": datetime.utcnow().isoformat()
-        }
-        db.collection('ai_chats').document().set(chat_doc)
-    except Exception as err:
-        logger.error(f"Error persisting AI chat to Firestore: {err}")
-
-    return {"user": user_prompt, "ai": reply}
-
+        dt = None
+        if "T" in deadline_str or "Z" in deadline_str:
+            dt = datetime.fromisoformat(deadline_str.replace("Z", ""))
+        else:
+            try:
+                dt = datetime.strptime(deadline_str, "%d %B %Y")
+            except ValueError:
+                dt = datetime.strptime(deadline_str, "%Y-%m-%d")
+        if dt:
+            return (dt - datetime.utcnow()).days
+    except Exception:
+        pass
+    return None
 
 @router.get("/dashboard-summary", response_model=AIDashboardSummaryResponse)
 def get_ai_dashboard_summary(
     db: Client = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    from app.api.v1.tasks import calculate_task_risk, DEFAULT_TASKS
+    from app.api.v1.tasks import DEFAULT_TASKS
     
     tasks_ref = db.collection('tasks')
     docs = list(tasks_ref.stream())
@@ -189,46 +85,150 @@ def get_ai_dashboard_summary(
         if data.get("assigned_id") == current_user.id or current_user.name.lower() in data.get("assigned", "").lower():
             my_tasks.append(data)
             
-    insights = []
+    teacher_priorities = []
+    hod_actions = []
     
     if current_user.role in [RoleEnum.ADMIN, RoleEnum.HOD]:
-        # HOD Action Center
-        high_risk_tasks = [t for t in department_tasks if t.get("risk_level") == "HIGH"]
-        approvals = [t for t in department_tasks if t.get("status") == "Awaiting Approval"]
+        # HOD Action Center logic
+        for t in department_tasks:
+            status = t.get("status", "")
+            if status in ["Completed"]: continue
+            
+            days_overdue = get_days_overdue(t)
+            risk_score = t.get("risk_score", 0)
+            
+            # 1. Critical Overdue
+            if days_overdue > 0 and status != "Awaiting Approval":
+                hod_actions.append(HODActionItem(
+                    type="CRITICAL",
+                    title=t.get("title", "Unknown Task"),
+                    description=f"{days_overdue} days overdue",
+                    target_id=t.get("id"),
+                    target_route="/tasks",
+                    priority_level=100 + days_overdue
+                ))
+            # 2. High Risk
+            elif risk_score > 70 and status != "Awaiting Approval":
+                hod_actions.append(HODActionItem(
+                    type="HIGH RISK",
+                    title=t.get("title", "Unknown Task"),
+                    description=f"{risk_score}% delay risk",
+                    target_id=t.get("id"),
+                    target_route="/tasks",
+                    priority_level=80 + (risk_score / 10)
+                ))
+            # 3. Pending Approvals
+            elif status == "Awaiting Approval":
+                hod_actions.append(HODActionItem(
+                    type="APPROVAL",
+                    title=t.get("title", "Unknown Task"),
+                    description=f"Waiting for approval from {t.get('assigned', 'Faculty')}",
+                    target_id=t.get("id"),
+                    target_route="/approvals",
+                    priority_level=60
+                ))
+                
+        # 4. Overloaded Faculty
+        for fac_id, load in workload_map.items():
+            if load > 4:
+                # Need to find faculty name
+                fac_name = fac_id
+                for d in department_tasks:
+                    if d.get("assigned_id") == fac_id or d.get("assigned") == fac_id:
+                        fac_name = d.get("assigned", fac_id)
+                        break
+                hod_actions.append(HODActionItem(
+                    type="WORKLOAD",
+                    title=fac_name,
+                    description=f"At {load} active tasks workload",
+                    target_id=fac_id,
+                    target_route="/employees",
+                    priority_level=50 + load
+                ))
+                
+        # Sort HOD actions
+        hod_actions.sort(key=lambda x: x.priority_level, reverse=True)
+        # Take top 10
+        hod_actions = hod_actions[:10]
         
-        if high_risk_tasks:
-            insights.append(f"🔴 Deadline Risk: {len(high_risk_tasks)} department tasks have a HIGH risk of delay.")
-        else:
-            insights.append(f"🟢 Deadline Risk: All tasks are on track.")
-            
-        overloaded = [f for f, w in workload_map.items() if w > 3]
-        if overloaded:
-            insights.append(f"👨‍🏫 Workload: {len(overloaded)} faculty members are currently overloaded (>3 tasks).")
-            
-        if approvals:
-            insights.append(f"✅ Approval: {len(approvals)} completed tasks need your review.")
-            
     else:
-        # Teacher: Today's Priority
-        high_risk = [t for t in my_tasks if t.get("risk_level") == "HIGH" and t.get("status") not in ["Completed", "Awaiting Approval"]]
-        if high_risk:
-            insights.append(f"🔴 Priority: '{high_risk[0].get('title')}' is at HIGH risk (Score: {high_risk[0].get('risk_score')}%). Focus on this first.")
-        else:
-            insights.append("🟢 Priority: Your active tasks are on track.")
+        # Teacher: Today's Priority logic
+        for t in my_tasks:
+            status = t.get("status", "")
+            if status in ["Completed", "Awaiting Approval"]: continue
             
-        approvals = [t for t in my_tasks if t.get("status") == "Awaiting Approval"]
-        if approvals:
-            insights.append(f"✅ Approval: {len(approvals)} of your tasks are awaiting HOD review.")
+            days_overdue = get_days_overdue(t)
+            days_remaining = get_days_remaining(t)
+            risk_score = t.get("risk_score", 0)
+            priority = t.get("priority", "Medium").upper()
             
-        workload = workload_map.get(current_user.id) or workload_map.get(current_user.name) or len(my_tasks)
-        insights.append(f"👨‍🏫 Workload: You have {workload} active tasks.")
+            priority_multiplier = 30 if priority == "HIGH" else (15 if priority == "MEDIUM" else 5)
+            
+            score = (days_overdue * 50) + risk_score + priority_multiplier
+            if days_remaining is not None and days_remaining <= 3 and days_remaining >= 0:
+                score += (4 - days_remaining) * 10
+                
+            why = []
+            if days_overdue > 0:
+                why.append("Task is overdue")
+            elif days_remaining is not None and days_remaining <= 2:
+                why.append(f"Deadline is in {days_remaining} days")
+            
+            progress = t.get("progress", "0%")
+            if int(progress.replace("%", "")) < 40 and days_remaining is not None and days_remaining <= 5:
+                why.append(f"Progress is only {progress}")
+                
+            if risk_score > 70:
+                why.append("High deadline risk")
+            
+            if priority == "HIGH":
+                why.append("High priority task")
+                
+            if not why:
+                why.append("Upcoming deadline or general priority")
+                
+            teacher_priorities.append(AIPriorityItem(
+                task_id=t.get("id", ""),
+                title=t.get("title", ""),
+                priority=priority,
+                risk_score=risk_score,
+                rank=0, # assigned after sort
+                why=why,
+                _raw_score=score
+            ))
+            
+        # Sort and assign rank
+        teacher_priorities.sort(key=lambda x: getattr(x, '_raw_score', 0), reverse=True)
+        for idx, item in enumerate(teacher_priorities):
+            item.rank = idx + 1
+            
+        teacher_priorities = teacher_priorities[:5]
 
     return {
         "greeting": f"Good Morning, {current_user.name}",
-        "insights": insights,
+        "teacher_priorities": teacher_priorities,
+        "hod_actions": hod_actions,
         "productivity_score": "95%"
     }
 
+@router.post("/chat", response_model=AIChatResponse)
+def gemini_query(
+    request: AIChatRequest,
+    current_user: User = Depends(get_current_active_user)
+):
+    if not settings.GEMINI_API_KEY:
+        return {"user": request.message, "ai": "HierSync AI is operating in simulated mode. Please add your GEMINI_API_KEY to the backend .env to enable live chat."}
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
+        data = {"contents": [{"parts": [{"text": request.message}]}]}
+        req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})
+        response = urllib.request.urlopen(req)
+        result = json.loads(response.read().decode('utf-8'))
+        answer = result['candidates'][0]['content']['parts'][0]['text']
+        return {"user": request.message, "ai": answer}
+    except Exception as e:
+        logger.error(f"Gemini API Error: {str(e)}")
+        return {"user": request.message, "ai": f"AI Error: {str(e)}"}
 
 @router.post("/generate-report", response_model=AIReportResponse)
 def generate_ai_report(
@@ -236,39 +236,11 @@ def generate_ai_report(
     current_user: User = Depends(get_current_active_user)
 ):
     return {
-        "title": "HiéraSync AI Departmental Performance Report",
-        "summary": "AI analysis shows AIML department workflow efficiency is high (92%). Active tasks are progressing on schedule with pending approvals prioritized.",
+        "title": "HiAcraSync AI Departmental Performance Report",
+        "summary": "AI analysis shows AIML department workflow efficiency is high.",
         "recommendations": [
             "Review high-priority project approvals first",
-            "Monitor AI Lab Maintenance tasks",
-            "Schedule project review meetings before upcoming workshops"
+            "Monitor overdue tasks"
         ],
         "generated_at": datetime.utcnow().isoformat()
-    }
-
-
-@router.get("/calendar-insights")
-def get_calendar_insights(
-    current_user: User = Depends(get_current_active_user)
-):
-    return {
-        "insight": "AI predicts upcoming deadlines and recommends scheduling project reviews before important activities."
-    }
-
-
-@router.get("/approval-suggestions")
-def get_approval_suggestions(
-    current_user: User = Depends(get_current_active_user)
-):
-    return {
-        "suggestion": "AI recommends reviewing high priority project approvals first and completing pending department requests before deadlines."
-    }
-
-
-@router.post("/notification-summary")
-def get_notification_summary(
-    current_user: User = Depends(get_current_active_user)
-):
-    return {
-        "summary": "AI analyzed department activities: 3 pending approvals require attention, and 1 high priority task deadline is near."
     }

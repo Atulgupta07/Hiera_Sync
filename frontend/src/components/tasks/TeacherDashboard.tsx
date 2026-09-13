@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { tasksApi, aiApi } from "../../api";
-import { TaskResponse } from "../../types";
+import { TaskResponse, AIPriorityItem } from "../../types";
 import { useAuth } from "../../contexts/AuthContext";
-import { CheckCircle, Clock, AlertCircle, PlayCircle, Loader2, Calendar as CalendarIcon, AlignJustify, GitCommit } from "lucide-react";
+import { CheckCircle, Clock, AlertCircle, PlayCircle, Loader2, Calendar as CalendarIcon, AlignJustify, GitCommit, ChevronRight } from "lucide-react";
 import TaskDetailsModal from "./TaskDetailsModal";
 import { TaskCalendarView, TaskTimelineView } from "./TaskViews";
 
@@ -12,7 +12,7 @@ export default function TeacherDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [updating, setUpdating] = useState<string | null>(null);
-  const [aiInsights, setAiInsights] = useState<string[]>([]);
+  const [aiPriorities, setAiPriorities] = useState<AIPriorityItem[]>([]);
   
   const [currentView, setCurrentView] = useState<"LIST" | "CALENDAR" | "TIMELINE">("LIST");
   const [selectedTask, setSelectedTask] = useState<TaskResponse | null>(null);
@@ -29,8 +29,8 @@ export default function TeacherDashboard() {
       
       try {
          const aiData = await aiApi.getDashboardSummary();
-         if(aiData?.insights?.length > 0) {
-            setAiInsights(aiData.insights);
+         if(aiData?.teacher_priorities) {
+            setAiPriorities(aiData.teacher_priorities);
          }
       } catch (e) {}
     } catch (err: any) {
@@ -212,10 +212,50 @@ export default function TeacherDashboard() {
          <div className="w-full lg:w-80 shrink-0">
             <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 shadow-sm">
               <h3 className="text-sm font-bold text-indigo-900 mb-3 flex items-center gap-2">🤖 Today's Priority</h3>
-              <ul className="space-y-3">
-                {aiInsights.map((insight, idx) => (
-                  <li key={idx} className="text-xs text-indigo-800 bg-white p-3 rounded-lg shadow-sm leading-relaxed border border-indigo-100">
-                    {insight}
+              <ul className="space-y-4">
+                {aiPriorities.length === 0 && (
+                  <li className="text-xs text-indigo-700">No urgent priorities today!</li>
+                )}
+                {aiPriorities.map((item, idx) => (
+                  <li key={idx} className="bg-white rounded-xl shadow-sm border border-indigo-100 overflow-hidden">
+                    <div className="p-3 border-b border-gray-100 bg-gray-50/50 flex justify-between items-start">
+                      <div>
+                        <div className="font-bold text-gray-800 text-sm flex items-center gap-1.5">
+                           <span className="text-xs font-black text-indigo-400">{item.rank}.</span>
+                           {item.title}
+                        </div>
+                        <div className="text-[10px] uppercase font-bold tracking-wider mt-1 flex gap-2">
+                           <span className={item.priority === 'HIGH' ? 'text-red-500' : 'text-amber-500'}>
+                             {item.priority} Priority
+                           </span>
+                           {(item.risk_score || 0) > 60 && (
+                             <span className="text-red-600 font-bold flex items-center gap-0.5">
+                                <AlertCircle className="w-3 h-3" /> Risk {item.risk_score}%
+                             </span>
+                           )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-white">
+                      <div className="text-xs font-semibold text-gray-500 mb-1">Why?</div>
+                      <ul className="text-xs text-gray-600 space-y-1 mb-3">
+                        {(item.why || []).map((reason: string, i: number) => (
+                          <li key={i} className="flex items-start gap-1">
+                            <span className="text-indigo-400 mt-0.5">•</span>
+                            {reason}
+                          </li>
+                        ))}
+                      </ul>
+                      <button 
+                        onClick={() => {
+                          const matched = tasks.find(t => t.id === item.task_id);
+                          if (matched) setSelectedTask(matched);
+                        }}
+                        className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                      >
+                        Open Task <ChevronRight className="w-3 h-3" />
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>

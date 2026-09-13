@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
 import { tasksApi, employeesApi, aiApi } from "../../api";
-import { TaskResponse, EmployeeResponse, TaskCreate } from "../../types";
-import { CheckCircle, Clock, AlertCircle, PlayCircle, Plus, Search, Calendar as CalendarIcon, AlignJustify, GitCommit } from "lucide-react";
+import { TaskResponse, EmployeeResponse, TaskCreate, HODActionItem, FacultyPerformance } from "../../types";
+import { CheckCircle, Clock, AlertCircle, PlayCircle, Plus, Search, Calendar as CalendarIcon, AlignJustify, GitCommit, ChevronRight, Activity, Users, FileText } from "lucide-react";
 import TaskDetailsModal from "./TaskDetailsModal";
 import { TaskCalendarView, TaskTimelineView } from "./TaskViews";
+import { analyticsApi } from "../../api/analytics";
 
 export default function HODDashboard() {
   const [tasks, setTasks] = useState<TaskResponse[]>([]);
   const [facultyList, setFacultyList] = useState<EmployeeResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [aiInsights, setAiInsights] = useState<string[]>([]);
+  const [hodActions, setHodActions] = useState<HODActionItem[]>([]);
+  const [facultyPerformance, setFacultyPerformance] = useState<FacultyPerformance[]>([]);
   const [showForm, setShowForm] = useState(false);
   
   const [taskForm, setTaskForm] = useState<TaskCreate>({
@@ -40,13 +42,19 @@ export default function HODDashboard() {
       setFacultyList(facultyData);
       
       try {
-         const aiData = await aiApi.getDashboardSummary();
-         if(aiData?.insights?.length > 0) {
-            setAiInsights(aiData.insights);
+         const [aiData, perfData] = await Promise.all([
+            aiApi.getDashboardSummary(),
+            analyticsApi.getFacultyPerformance()
+         ]);
+         
+         if(aiData?.hod_actions) {
+            setHodActions(aiData.hod_actions);
          }
-      } catch (e) {
-         setAiInsights(["👨‍🏫 HierSync AI: Connect to server to fetch insights."]);
-      }
+         
+         if(perfData) {
+            setFacultyPerformance(perfData);
+         }
+      } catch (e) {}
     } catch (err: any) {
       setError(err.message || "Failed to load dashboard data");
     } finally {
@@ -286,40 +294,82 @@ export default function HODDashboard() {
           </div>
         </div>
 
-        {/* Right Side: Faculty Workload & AI */}
-        <div className="w-full lg:w-80 flex flex-col gap-6 shrink-0">
-           <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 shadow-sm">
-              <h3 className="text-sm font-bold text-indigo-900 mb-3 flex items-center gap-2">🤖 HOD Action Center</h3>
-              <ul className="space-y-3">
-                {aiInsights.map((insight, idx) => (
-                  <li key={idx} className="text-xs text-indigo-800 bg-white p-3 rounded-lg shadow-sm leading-relaxed border border-indigo-100">
-                    {insight}
-                  </li>
-                ))}
-              </ul>
-           </div>
+         {/* Right Side: Faculty Workload & AI */}
+         <div className="w-full lg:w-80 flex flex-col gap-6 shrink-0">
+            {/* Action Center */}
+            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 shadow-sm">
+               <h3 className="text-sm font-bold text-indigo-900 mb-3 flex items-center gap-2">⚡ HOD Action Center</h3>
+               <ul className="space-y-3">
+                 {hodActions.length === 0 && (
+                   <li className="text-xs text-indigo-700">No actions required.</li>
+                 )}
+                 {hodActions.map((action, idx) => (
+                   <li key={idx} className="bg-white rounded-xl shadow-sm border border-indigo-100 overflow-hidden flex flex-col">
+                     <div className="p-3 border-b border-gray-100 bg-gray-50/50">
+                        <div className="text-[10px] uppercase font-bold tracking-wider mb-1 flex items-center gap-1.5">
+                          {action.type === 'CRITICAL' && <span className="text-red-600"><AlertCircle className="w-3 h-3 inline"/> CRITICAL</span>}
+                          {action.type === 'HIGH RISK' && <span className="text-orange-500"><Activity className="w-3 h-3 inline"/> HIGH RISK</span>}
+                          {action.type === 'APPROVAL' && <span className="text-purple-600"><FileText className="w-3 h-3 inline"/> APPROVAL</span>}
+                          {action.type === 'WORKLOAD' && <span className="text-blue-600"><Users className="w-3 h-3 inline"/> WORKLOAD</span>}
+                        </div>
+                        <div className="font-bold text-gray-800 text-sm leading-tight">{action.title}</div>
+                     </div>
+                     <div className="p-3 bg-white">
+                        <p className="text-xs text-gray-600 leading-relaxed mb-3">{action.description}</p>
+                        <button 
+                          onClick={() => {
+                            if (action.target_id && (action.type === 'CRITICAL' || action.type === 'HIGH RISK' || action.type === 'APPROVAL')) {
+                               const matched = tasks.find(t => t.id === action.target_id);
+                               if (matched) setSelectedTask(matched);
+                            }
+                          }}
+                          className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                        >
+                          Take Action <ChevronRight className="w-3 h-3" />
+                        </button>
+                     </div>
+                   </li>
+                 ))}
+               </ul>
+            </div>
 
-           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-             <h3 className="text-sm font-bold text-slate-800 mb-4 border-b pb-2">Faculty Workload</h3>
-             <div className="space-y-5">
-               {facultyList.map(faculty => {
-                 const fTasks = tasks.filter(t => t.assigned_id === faculty.id || t.assigned === faculty.name);
-                 const fActive = fTasks.filter(t => t.status !== "Completed").length;
-                 const loadPercent = Math.min(100, Math.round((fActive / 5) * 100));
-                 return (
-                 <div key={faculty.id} className="block">
-                   <div className="flex justify-between items-end mb-1">
-                     <span className="text-sm font-semibold text-slate-700">{faculty.name}</span>
-                     <span className="text-xs font-bold text-slate-500">{loadPercent}%</span>
-                   </div>
-                   <div className="w-full bg-slate-100 rounded-full h-2 mb-1.5 overflow-hidden">
-                     <div className={`h-2 rounded-full ${loadPercent > 80 ? 'bg-red-500' : loadPercent > 50 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${loadPercent}%` }}></div>
-                   </div>
-                 </div>
-               )})}
-             </div>
-           </div>
-        </div>
+            {/* Faculty Performance & Score */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+              <h3 className="text-sm font-bold text-slate-800 mb-4 border-b pb-2 flex items-center gap-2"><Activity className="w-4 h-4 text-emerald-500" /> Faculty Performance</h3>
+              <div className="space-y-6">
+                {facultyPerformance.length === 0 && (
+                  <div className="text-xs text-slate-500 text-center py-4">Loading performance data...</div>
+                )}
+                {facultyPerformance.map(perf => (
+                  <div key={perf.faculty_id} className="block group">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <span className="text-sm font-bold text-slate-700 block">{perf.faculty_name}</span>
+                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{perf.pending} Active • {perf.overdue} Overdue</span>
+                      </div>
+                      <div className="text-right">
+                        <span className={`text-sm font-black ${perf.productivity_score >= 80 ? 'text-emerald-500' : perf.productivity_score >= 60 ? 'text-amber-500' : 'text-red-500'}`}>
+                          {perf.productivity_score}
+                        </span>
+                        <div className="text-[10px] text-slate-400 font-bold">SCORE</div>
+                      </div>
+                    </div>
+                    
+                    {/* Tiny stats bar */}
+                    <div className="flex gap-1 h-1.5 w-full rounded-full overflow-hidden mb-2">
+                       <div className="bg-emerald-400" style={{width: `${perf.on_time_rate}%`}}></div>
+                       <div className="bg-slate-200 flex-1"></div>
+                    </div>
+                    
+                    {/* Expandable Explanation */}
+                    <div className="hidden group-hover:block mt-3 bg-slate-50 p-3 rounded-lg border border-slate-100 transition-all">
+                       <p className="text-xs text-slate-600 whitespace-pre-wrap font-medium leading-relaxed">{perf.productivity_explanation}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+         </div>
       </div>
 
       {selectedTask && (

@@ -7,6 +7,7 @@ from app.database.session import get_db
 from app.schemas.schemas import TaskCreate, TaskUpdate, TaskResponse, Subtask
 from app.auth.permissions import get_current_active_user, check_role
 from app.models.models import User, RoleEnum
+from app.api.v1.notifications import trigger_notification
 
 router = APIRouter()
 
@@ -175,6 +176,30 @@ def get_tasks(
         workload = workload_map.get(assignee_key, 0)
         data = calculate_task_risk(data, workload)
         
+        # Trigger notifications for assigned user if applicable
+        if data.get("assigned_id") and data.get("status") not in ["Completed", "Awaiting Approval"]:
+            risk_score = data.get("risk_score", 0)
+            if risk_score >= 80:
+                trigger_notification(db, data["assigned_id"], "DEADLINE RISK", "Deadline Risk", f"Task '{data.get('title')}' is at high risk of delay.\nRisk: {risk_score}%", "/tasks", "High", "🔴")
+                
+            deadline_str = data.get("deadline", "")
+            if deadline_str:
+                try:
+                    dt = None
+                    if "T" in deadline_str or "Z" in deadline_str:
+                        dt = datetime.fromisoformat(deadline_str.replace("Z", ""))
+                    else:
+                        try:
+                            dt = datetime.strptime(deadline_str, "%d %B %Y")
+                        except ValueError:
+                            dt = datetime.strptime(deadline_str, "%Y-%m-%d")
+                    if dt:
+                        days_left = (dt - datetime.utcnow()).days
+                        if days_left < 0:
+                            trigger_notification(db, data["assigned_id"], "TASK OVERDUE", "Task Overdue", f"Task '{data.get('title')}' is {abs(days_left)} days overdue.", "/tasks", "High", "🔴")
+                except Exception:
+                    pass
+        
         tasks.append(data)
 
     return tasks
@@ -203,6 +228,18 @@ def create_task(
         "timestamp": datetime.utcnow().isoformat()
     })
     
+    if task.assigned_id:
+        trigger_notification(
+            db, 
+            task.assigned_id, 
+            "ASSIGNMENT", 
+            "New Task Assigned", 
+            f"New task assigned by HOD:\n{task.title}\nDeadline: {task.deadline or 'No Deadline'}", 
+            "/tasks",
+            task.priority,
+            "🔵"
+        )
+        
     return db_task
 
 @router.get("/{task_id}", response_model=TaskResponse)
@@ -278,9 +315,10 @@ def update_task(
                 filtered_update['progress'] = f"{prog_val}%"
         
         # Handle auto-completion logic if require_approval is false
-        if filtered_update.get("progress") == "100%":
+        if filtered_update.get("progress") == "100%" and existing_data.get("progress") != "100%":
             if existing_data.get("require_approval", False):
                 filtered_update["status"] = "Awaiting Approval"
+                trigger_notification(db, "department", "APPROVAL", "Approval Request", f"{existing_data.get('assigned')} submitted {existing_data.get('title')} for approval.", "/approvals", "High", "🟣")
             else:
                 filtered_update["status"] = "Completed"
                 
@@ -297,7 +335,21 @@ def update_task(
             update_data['progress'] = f"{prog_val}%"
             if prog_val == 100:
                 update_data['status'] = "Awaiting Approval" if update_data.get("require_approval", existing_data.get("require_approval", False)) else "Completed"
+                if update_data['status'] == "Awaiting Approval":
+                    trigger_notification(db, "department", "APPROVAL", "Approval Request", f"{existing_data.get('assigned')} submitted {existing_data.get('title')} for approval.", "/approvals", "High", "🟣")
             
+    # Check status changes by HOD
+    if "status" in update_data and update_data["status"] != existing_data.get("status"):
+        new_status = update_data["status"]
+        if new_status == "Completed" and existing_data.get("status") == "Awaiting Approval":
+            # Approved
+            if existing_data.get("assigned_id"):
+                trigger_notification(db, existing_data.get("assigned_id"), "TASK APPROVED", "Task Approved", f"Your task '{existing_data.get('title')}' was approved by HOD.", "/tasks", "Low", "🟢")
+        elif new_status != "Completed" and existing_data.get("status") == "Awaiting Approval":
+            # Rejected / Revision
+            if existing_data.get("assigned_id"):
+                trigger_notification(db, existing_data.get("assigned_id"), "REVISION REQUIRED", "Revision Required", f"HOD requested changes to '{existing_data.get('title')}'.", "/tasks", "High", "🔴")
+
     doc_ref.update(update_data)
     return doc_ref.get().to_dict()
 

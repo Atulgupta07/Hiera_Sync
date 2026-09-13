@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { TaskResponse, Subtask, EmployeeResponse } from '../../types';
 import { tasksApi } from '../../api';
+import TaskComments from './TaskComments';
+import TaskAttachments from './TaskAttachments';
 import { CheckSquare, Square, X, AlertTriangle, Clock, Save, FileText, User as UserIcon } from 'lucide-react';
-
 interface TaskDetailsModalProps {
   task: TaskResponse;
   role: string;
@@ -260,6 +261,17 @@ export default function TaskDetailsModal({ task, role, onClose, onUpdate, facult
             
           </div>
         </div>
+        
+        <div className="mt-8 border-t border-gray-200 pt-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Attachments & Files</h3>
+          <TaskAttachments taskId={task.id} />
+        </div>
+        
+        <div className="mt-8 border-t border-gray-200 pt-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Comments & Mentions</h3>
+          <TaskComments taskId={task.id} />
+        </div>
+        
       </div>
     </div>
   );

@@ -13,6 +13,12 @@ from app.api.v1.search import router as search_router
 from app.api.v1.test import router as test_router
 from app.api.v1.departments import router as departments_router
 from app.api.v1.join import router as join_router
+from app.api.v1.analytics import router as analytics_router
+from app.api.v1.requests import router as requests_router
+from app.api.v1.comments import router as comments_router
+from app.api.v1.attachments import router as attachments_router
+from app.api.v1.goals import router as goals_router
+
 api_router = APIRouter()
 
 api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
@@ -27,4 +33,9 @@ api_router.include_router(settings_router, prefix="/settings", tags=["settings"]
 api_router.include_router(search_router, prefix="/search", tags=["search"])
 api_router.include_router(departments_router, prefix="/departments", tags=["departments"])
 api_router.include_router(join_router, prefix="/join", tags=["join"])
+api_router.include_router(analytics_router, prefix="/analytics", tags=["analytics"])
+api_router.include_router(requests_router, prefix="/task-requests", tags=["requests"])
+api_router.include_router(comments_router, prefix="/comments", tags=["comments"])
+api_router.include_router(attachments_router, prefix="/attachments", tags=["attachments"])
+api_router.include_router(goals_router, prefix="/goals", tags=["goals"])
 api_router.include_router(test_router)

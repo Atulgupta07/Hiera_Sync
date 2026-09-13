@@ -49,7 +49,21 @@ export default function Sidebar() {
         name: isHodOrAdmin ? "Tasks" : "My Tasks",
         path: "/tasks",
         icon: <FaTasks className="w-4 h-4" />,
-        badge: "1",
+        badge: null,
+        roles: ["ADMIN", "HOD", "FACULTY"]
+      },
+      {
+        name: isHodOrAdmin ? "Incoming Requests" : "Request Task",
+        path: "/task-requests",
+        icon: <FaTasks className="w-4 h-4" />,
+        badge: null,
+        roles: ["ADMIN", "HOD", "FACULTY"]
+      },
+      {
+        name: "Goals",
+        path: "/goals",
+        icon: <FaChartBar className="w-4 h-4" />,
+        badge: null,
         roles: ["ADMIN", "HOD", "FACULTY"]
       },
       {
@@ -70,7 +84,7 @@ export default function Sidebar() {
         name: "Approvals",
         path: "/approvals",
         icon: <FaClipboardCheck className="w-4 h-4" />,
-        badge: "9",
+        badge: null,
         roles: ["ADMIN", "HOD"]
       },
       {
