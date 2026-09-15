@@ -14,6 +14,8 @@ class UserBase(BaseModel):
     joining_date: Optional[str] = "Not Available"
     association: Optional[str] = "Regular"
     avatar_url: Optional[str] = None
+    phone: Optional[str] = None
+    whatsapp_enabled: Optional[bool] = False
 
 class UserCreate(UserBase):
     password: str
@@ -52,6 +54,8 @@ class EmployeeUpdate(BaseModel):
     association: Optional[str] = None
     role: Optional[RoleEnum] = None
     avatar_url: Optional[str] = None
+    phone: Optional[str] = None
+    whatsapp_enabled: Optional[bool] = None
 
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
@@ -91,24 +95,57 @@ class DepartmentReportSummary(BaseModel):
 # Event Schemas
 class EventCreate(BaseModel):
     title: str
-    date: str
-    type: str = "Academic"
-    person: str
-    description: Optional[str] = None
+    date: Optional[str] = None
+    start_date: Optional[str] = None
+    start_time: Optional[str] = None
+    end_date: Optional[str] = None
+    end_time: Optional[str] = None
+    category: Optional[str] = "Academic"
+    type: Optional[str] = "Academic"
+    person: Optional[str] = None
+    organizer_id: Optional[str] = None
+    organizer_name: Optional[str] = None
+    participant_ids: Optional[List[str]] = Field(default_factory=list)
+    participant_names: Optional[List[str]] = Field(default_factory=list)
     location: Optional[str] = None
+    description: Optional[str] = None
+    priority: Optional[str] = "Medium"
+    status: Optional[str] = "UPCOMING"
+    recurrence: Optional[str] = "Does not repeat"
+    meeting_link: Optional[str] = None
+    notes: Optional[str] = None
+    send_whatsapp_reminder: Optional[bool] = False
+    reminder_timing: Optional[str] = "1 day before"
 
 class EventUpdate(BaseModel):
     title: Optional[str] = None
     date: Optional[str] = None
+    start_date: Optional[str] = None
+    start_time: Optional[str] = None
+    end_date: Optional[str] = None
+    end_time: Optional[str] = None
+    category: Optional[str] = None
     type: Optional[str] = None
     person: Optional[str] = None
-    description: Optional[str] = None
+    organizer_id: Optional[str] = None
+    organizer_name: Optional[str] = None
+    participant_ids: Optional[List[str]] = None
+    participant_names: Optional[List[str]] = None
     location: Optional[str] = None
+    description: Optional[str] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None
+    recurrence: Optional[str] = None
+    meeting_link: Optional[str] = None
+    notes: Optional[str] = None
+    send_whatsapp_reminder: Optional[bool] = None
+    reminder_timing: Optional[str] = None
 
 class EventResponse(EventCreate):
     id: str
     creator_id: Optional[str] = "admin"
     created_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -423,3 +460,62 @@ class JoinRequestResponse(BaseModel):
     department_code: str
     status: str
     requested_at: str
+
+# Conflict Detection Schemas
+class ConflictCheckRequest(BaseModel):
+    event_id: Optional[str] = None
+    start_date: str
+    start_time: str
+    end_date: str
+    end_time: str
+    participant_ids: List[str] = Field(default_factory=list)
+    participant_names: List[str] = Field(default_factory=list)
+
+class ConflictItem(BaseModel):
+    faculty_id: Optional[str] = None
+    faculty_name: str
+    conflicting_event_id: str
+    conflicting_event_title: str
+    start_date: str
+    start_time: str
+    end_date: str
+    end_time: str
+
+class ConflictCheckResponse(BaseModel):
+    has_conflict: bool
+    conflicts: List[ConflictItem] = Field(default_factory=list)
+
+# WhatsApp Schemas
+class WhatsAppSendRequest(BaseModel):
+    faculty_id: str
+    message: str
+    template_name: Optional[str] = None
+
+class WhatsAppMessageResponse(BaseModel):
+    id: str
+    sender_id: str
+    sender_name: Optional[str] = None
+    recipient_id: str
+    recipient_name: Optional[str] = None
+    recipient_phone: str
+    message: str
+    message_type: Optional[str] = "text"
+    template_name: Optional[str] = None
+    status: str # sending, sent, delivered, read, failed
+    provider_message_id: Optional[str] = None
+    error_message: Optional[str] = None
+    created_at: str
+    sent_at: Optional[str] = None
+
+class WhatsAppFacultyStatus(BaseModel):
+    id: str
+    name: str
+    email: str
+    designation: Optional[str] = None
+    phone: Optional[str] = None
+    whatsapp_enabled: bool = False
+    current_workload: Optional[int] = 0
+
+class WhatsAppOptInUpdate(BaseModel):
+    phone: Optional[str] = None
+    whatsapp_enabled: bool

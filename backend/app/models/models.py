@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 import enum
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 class RoleEnum(str, enum.Enum):
     ADMIN = "ADMIN"
@@ -52,6 +52,8 @@ class User(BaseModel):
     joining_date: Optional[str] = "Not Available"
     association: Optional[str] = "Regular"
     avatar_url: Optional[str] = None
+    phone: Optional[str] = None
+    whatsapp_enabled: Optional[bool] = False
     status: str = "ACTIVE"
 
 class Department(BaseModel):
@@ -79,10 +81,26 @@ class Event(BaseModel):
     id: str
     title: str
     description: Optional[str] = None
+    category: Optional[str] = "Academic"
     location: Optional[str] = None
-    start_time: datetime
-    end_time: datetime
-    creator_id: str
+    start_date: Optional[str] = None
+    start_time: Optional[str] = None
+    end_date: Optional[str] = None
+    end_time: Optional[str] = None
+    organizer_id: Optional[str] = None
+    organizer_name: Optional[str] = None
+    participant_ids: Optional[List[str]] = None
+    participant_names: Optional[List[str]] = None
+    priority: Optional[str] = "Medium"
+    status: Optional[str] = "UPCOMING"
+    recurrence: Optional[str] = "Does not repeat"
+    meeting_link: Optional[str] = None
+    notes: Optional[str] = None
+    send_whatsapp_reminder: Optional[bool] = False
+    reminder_timing: Optional[str] = "1 day before"
+    creator_id: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
 class Approval(BaseModel):
     id: str

@@ -18,6 +18,7 @@ from app.api.v1.requests import router as requests_router
 from app.api.v1.comments import router as comments_router
 from app.api.v1.attachments import router as attachments_router
 from app.api.v1.goals import router as goals_router
+from app.api.v1.whatsapp import router as whatsapp_router
 
 api_router = APIRouter()
 
@@ -38,4 +39,5 @@ api_router.include_router(requests_router, prefix="/task-requests", tags=["reque
 api_router.include_router(comments_router, prefix="/comments", tags=["comments"])
 api_router.include_router(attachments_router, prefix="/attachments", tags=["attachments"])
 api_router.include_router(goals_router, prefix="/goals", tags=["goals"])
+api_router.include_router(whatsapp_router, prefix="/whatsapp", tags=["whatsapp"])
 api_router.include_router(test_router)
