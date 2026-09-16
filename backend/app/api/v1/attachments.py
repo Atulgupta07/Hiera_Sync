@@ -1,14 +1,17 @@
 import os
 import uuid
 import shutil
-from typing import List
+import mimetypes
+from typing import List, Optional
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, Request, status
 from fastapi.responses import FileResponse
 from google.cloud.firestore import Client
+from google.cloud.firestore_v1.base_query import FieldFilter
 from app.database.session import get_db
 from app.schemas.schemas import TaskAttachmentResponse
 from app.auth.permissions import get_current_active_user
+from app.auth.jwt import verify_token
 from app.models.models import User, RoleEnum
 
 router = APIRouter()
@@ -19,15 +22,68 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".csv", ".txt", ".png", ".jpg", ".jpeg"}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
-def validate_task_access(task_id: str, db: Client, current_user: User):
+def get_user_from_request_or_token(
+    request: Request,
+    token: Optional[str],
+    db: Client
+) -> User:
+    auth_header = request.headers.get("Authorization")
+    raw_token = None
+    if auth_header and auth_header.startswith("Bearer "):
+        raw_token = auth_header.split(" ", 1)[1]
+    elif token:
+        raw_token = token
+
+    if not raw_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    token_data = verify_token(raw_token, credentials_exception)
+    users_ref = db.collection('users')
+    query = list(users_ref.where(filter=FieldFilter('email', '==', token_data.email)).stream())
+    if not query:
+        raise credentials_exception
+
+    user_doc = query[0]
+    user_dict = user_doc.to_dict() or {}
+    user_dict['id'] = user_doc.id
+
+    user_fields = set(getattr(User, "model_fields", getattr(User, "__fields__", {})).keys())
+    filtered_dict = {k: v for k, v in user_dict.items() if k in user_fields}
+
+    try:
+        return User(**filtered_dict)
+    except Exception:
+        raise credentials_exception
+
+def validate_task_access(task_id: str, db: Client, current_user: User) -> dict:
     task_ref = db.collection('tasks').document(task_id)
     task_doc = task_ref.get()
+    
     if not task_doc.exists:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Task not found"
+        )
+    
+    task_data: dict = task_doc.to_dict() or {}
+    
+    assigned_id = task_data.get('assigned_id') or task_data.get('assigned_to')
+    if current_user.role == RoleEnum.FACULTY and assigned_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Access denied to this task"
+        )
         
-    task_data = task_doc.to_dict()
-    if current_user.role == RoleEnum.FACULTY and task_data.get('assigned_id') != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to access attachments for this task")
     return task_data
 
 @router.get("/{task_id}", response_model=List[TaskAttachmentResponse])
@@ -38,7 +94,8 @@ def get_task_attachments(
 ):
     validate_task_access(task_id, db, current_user)
     
-    attach_ref = db.collection('task_attachments').where('task_id', '==', task_id)
+    attach_ref = db.collection('task_attachments').where(filter=FieldFilter('task_id', '==', task_id))
+
     docs = list(attach_ref.stream())
     
     attachments = [doc.to_dict() for doc in docs]
@@ -96,9 +153,11 @@ def upload_task_attachment(
 def download_task_attachment(
     task_id: str,
     attachment_id: str,
-    db: Client = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    request: Request,
+    token: Optional[str] = Query(None),
+    db: Client = Depends(get_db)
 ):
+    current_user = get_user_from_request_or_token(request, token, db)
     validate_task_access(task_id, db, current_user)
     
     doc_ref = db.collection('task_attachments').document(attachment_id)
@@ -114,7 +173,26 @@ def download_task_attachment(
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found on server")
         
-    return FileResponse(path=file_path, filename=data['file_name'])
+    file_name = data.get('file_name', 'document.pdf')
+    mime_type, _ = mimetypes.guess_type(file_name)
+    if not mime_type:
+        ext = os.path.splitext(file_name)[1].lower()
+        if ext == '.pdf':
+            mime_type = 'application/pdf'
+        elif ext in ['.jpg', '.jpeg', '.png', '.gif']:
+            mime_type = f"image/{'jpeg' if ext == '.jpg' else ext.lstrip('.')}"
+        else:
+            mime_type = 'application/octet-stream'
+
+    return FileResponse(
+        path=file_path, 
+        filename=file_name,
+        media_type=mime_type,
+        headers={
+            "Content-Disposition": f"inline; filename=\"{file_name}\"",
+            "Content-Type": mime_type
+        }
+    )
 
 @router.delete("/{task_id}/{attachment_id}")
 def delete_task_attachment(
