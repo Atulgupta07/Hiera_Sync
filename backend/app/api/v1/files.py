@@ -57,15 +57,39 @@ def list_files(
     docs = list(files_ref.stream())
     return [doc.to_dict() for doc in docs]
 
+import mimetypes
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, status, Query, Request
+from fastapi.responses import FileResponse
+from app.api.v1.attachments import get_user_from_request_or_token
+
 @router.get("/download/{file_id}")
 def download_file_info(
     file_id: str,
-    db: Client = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    request: Request,
+    token: Optional[str] = Query(None),
+    db: Client = Depends(get_db)
 ):
+    current_user = get_user_from_request_or_token(request, token, db)
     doc_ref = db.collection('files').document(file_id)
     doc = doc_ref.get()
     if not doc.exists:
         raise HTTPException(status_code=404, detail="File not found")
-    return doc.to_dict()
+    data = doc.to_dict()
+    file_path = data.get("file_path")
+    if file_path and os.path.exists(file_path):
+        file_name = data.get("filename", "document.pdf")
+        mime_type, _ = mimetypes.guess_type(file_name)
+        if not mime_type:
+            mime_type = data.get("content_type", "application/octet-stream")
+        return FileResponse(
+            path=file_path,
+            filename=file_name,
+            media_type=mime_type,
+            headers={
+                "Content-Disposition": f"inline; filename=\"{file_name}\"",
+                "Content-Type": mime_type
+            }
+        )
+    return data
+
 
