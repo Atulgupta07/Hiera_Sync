@@ -20,4 +20,7 @@ export const tasksApi = {
     
   delete: (id: string) => 
     client<{ message: string }>(`/tasks/${id}`, { method: 'DELETE' }),
+    
+  review: (id: string, decision: 'APPROVE' | 'RECHECK' | 'REJECT', remarks?: string) =>
+    client<TaskResponse>(`/tasks/${id}/review`, { method: 'POST', data: { decision, remarks } }),
 };
