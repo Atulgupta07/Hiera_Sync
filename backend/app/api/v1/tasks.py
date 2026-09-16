@@ -4,7 +4,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from google.cloud.firestore import Client
 from app.database.session import get_db
-from app.schemas.schemas import TaskCreate, TaskUpdate, TaskResponse, Subtask
+from app.schemas.schemas import TaskCreate, TaskUpdate, TaskResponse, Subtask, TaskReviewRequest
 from app.auth.permissions import get_current_active_user, check_role
 from app.models.models import User, RoleEnum
 from app.api.v1.notifications import trigger_notification
@@ -365,3 +365,104 @@ def delete_task(
         
     doc_ref.delete()
     return None
+
+@router.post("/{task_id}/review", response_model=TaskResponse)
+def review_task(
+    task_id: str,
+    review_in: TaskReviewRequest,
+    db: Client = Depends(get_db),
+    current_user: User = Depends(check_role([RoleEnum.ADMIN, RoleEnum.HOD]))
+):
+    doc_ref = db.collection('tasks').document(task_id)
+    doc = doc_ref.get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    existing_data = doc.to_dict()
+    decision = review_in.decision.upper()
+    remarks = (review_in.remarks or "").strip()
+    assigned_user_id = existing_data.get("assigned_id")
+    task_title = existing_data.get("title", "Task")
+
+    if decision == "APPROVE":
+        update_data = {
+            "status": "COMPLETED",
+            "progress": "100%"
+        }
+        notif_type = "TASK_APPROVED"
+        notif_title = "Task Approved"
+        notif_msg = f"Task Approved: '{task_title}' has been approved and marked completed."
+        notif_icon = "🟢"
+        notif_priority = "Low"
+
+    elif decision == "RECHECK":
+        if not remarks:
+            raise HTTPException(status_code=400, detail="Revision feedback notes are required for re-check.")
+        update_data = {
+            "status": "REVISION_REQUIRED",
+            "progress": "50%"
+        }
+        notif_type = "TASK_REVISION"
+        notif_title = "Action Required - Task Re-check"
+        notif_msg = f"Action Required - Task Re-check: '{task_title}' was not approved. Revision notes: '{remarks}'. Please revise and resubmit."
+        notif_icon = "🟡"
+        notif_priority = "High"
+
+    elif decision == "REJECT":
+        if not remarks:
+            raise HTTPException(status_code=400, detail="Reason for rejection is required.")
+        update_data = {
+            "status": "REJECTED",
+            "progress": "0%"
+        }
+        notif_type = "TASK_REJECTED"
+        notif_title = "Task Rejected"
+        notif_msg = f"Task Rejected: '{task_title}' was rejected. Reason: '{remarks}'. Please re-attempt this work."
+        notif_icon = "🔴"
+        notif_priority = "High"
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid review decision. Must be APPROVE, RECHECK, or REJECT.")
+
+    # Save remarks as a comment if provided
+    if remarks:
+        comment_id = f"cmt_{uuid.uuid4().hex[:8]}"
+        comment_data = {
+            "id": comment_id,
+            "task_id": task_id,
+            "author_id": current_user.id,
+            "author_name": current_user.name,
+            "content": f"[{decision}] {remarks}",
+            "mentions": [],
+            "created_at": datetime.utcnow().isoformat()
+        }
+        db.collection('task_comments').document(comment_id).set(comment_data)
+
+    doc_ref.update(update_data)
+
+    # Audit log entry
+    db.collection('activity_logs').document().set({
+        "user_id": current_user.id,
+        "user_name": current_user.name,
+        "action": f"Task Reviewed: {decision} - {task_title}",
+        "category": "task",
+        "details": f"Decision: {decision}, Remarks: {remarks or 'None'}",
+        "timestamp": datetime.utcnow().isoformat()
+    })
+
+    # Trigger targeted notification to assigned faculty
+    if assigned_user_id:
+        trigger_notification(
+            db,
+            user_id=assigned_user_id,
+            notif_type=notif_type,
+            title=notif_title,
+            message=notif_msg,
+            target_route="/tasks",
+            priority=notif_priority,
+            icon=notif_icon
+        )
+
+    updated_data = doc_ref.get().to_dict()
+    return calculate_task_risk(updated_data, 1)
+
