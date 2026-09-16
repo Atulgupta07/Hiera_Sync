@@ -15,6 +15,7 @@ import { Sparkles } from "lucide-react";
 import { aiApi } from "../api";
 import { AIChatResponse } from "../types";
 import { useAuth } from "../contexts/AuthContext";
+import MarkdownRenderer from "../components/MarkdownRenderer";
 
 export default function AIAssistantPage() {
   const { user } = useAuth();
@@ -174,7 +175,7 @@ export default function AIAssistantPage() {
                         <span className="text-xs text-gray-400 ml-2">Analyzing department context...</span>
                       </div>
                     ) : (
-                      msg.ai
+                      <MarkdownRenderer content={msg.ai} />
                     )}
                   </div>
                 </div>
