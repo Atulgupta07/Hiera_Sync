@@ -297,6 +297,10 @@ class TaskUpdate(BaseModel):
     subtasks: Optional[List[Subtask]] = None
     goal_id: Optional[str] = None
 
+class TaskReviewRequest(BaseModel):
+    decision: str
+    remarks: Optional[str] = None
+
 class TaskResponse(TaskCreate):
     id: str
     created_at: Optional[str] = None
