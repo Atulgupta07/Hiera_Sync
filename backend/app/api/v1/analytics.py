@@ -16,24 +16,19 @@ def get_faculty_performance(
     db: Client = Depends(get_db),
     current_user: User = Depends(check_role([RoleEnum.ADMIN, RoleEnum.HOD]))
 ):
-    tasks_ref = db.collection('tasks')
+    tasks_ref = db.collection('tasks').where('department_id', '==', current_user.department_id)
     docs = list(tasks_ref.stream())
     all_raw_tasks = [doc.to_dict() for doc in docs] if docs else []
     
     users_ref = db.collection('users')
-    user_docs = list(users_ref.where('role', '==', RoleEnum.FACULTY.value).stream())
+    user_docs = list(users_ref.where('role', '==', RoleEnum.FACULTY.value).where('department_id', '==', current_user.department_id).stream())
     
     faculty_map = {}
     for ud in user_docs:
         udata = ud.to_dict()
         faculty_map[udata['id']] = udata['name']
         
-    # If no users in DB, mock from tasks
-    if not faculty_map:
-        for t in all_raw_tasks:
-            if t.get("assigned_id") and t.get("assigned"):
-                faculty_map[t["assigned_id"]] = t["assigned"]
-                
+    # No mock fallback for users.
     results = []
     
     for fac_id, fac_name in faculty_map.items():

@@ -24,7 +24,7 @@ def get_task_comments(
         raise HTTPException(status_code=404, detail="Task not found")
         
     task_data = task_doc.to_dict()
-    if current_user.role == RoleEnum.FACULTY and task_data.get('assigned_id') != current_user.id:
+    if current_user.role == RoleEnum.FACULTY and current_user.id not in task_data.get('assignee_ids', []) and task_data.get('assigned_id') != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to view comments for this task")
 
     comments_ref = db.collection('task_comments').where('task_id', '==', task_id)
@@ -48,7 +48,7 @@ def create_task_comment(
         raise HTTPException(status_code=404, detail="Task not found")
         
     task_data = task_doc.to_dict()
-    if current_user.role == RoleEnum.FACULTY and task_data.get('assigned_id') != current_user.id:
+    if current_user.role == RoleEnum.FACULTY and current_user.id not in task_data.get('assignee_ids', []) and task_data.get('assigned_id') != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to comment on this task")
 
     comment_id = str(uuid.uuid4())

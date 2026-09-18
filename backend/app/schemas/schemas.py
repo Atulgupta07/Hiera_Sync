@@ -159,6 +159,8 @@ class TaskRequestBase(BaseModel):
     suggested_deadline: str
     estimated_effort: Optional[str] = None
     additional_notes: Optional[str] = None
+    department_id: Optional[str] = None
+    attachments: Optional[List[dict]] = None
 
 class TaskRequestCreate(TaskRequestBase):
     pass
@@ -240,6 +242,8 @@ class DepartmentGoalBase(BaseModel):
     start_date: str
     target_date: str
     status: str = "NOT_STARTED"
+    department_id: Optional[str] = None
+    progress: str = "0%"
 
 class DepartmentGoalCreate(DepartmentGoalBase):
     pass
@@ -283,6 +287,7 @@ class TaskCreate(BaseModel):
     assignee_ids: Optional[List[str]] = Field(default_factory=list)
     subtasks: List[Subtask] = Field(default_factory=list)
     goal_id: Optional[str] = None
+    department_id: Optional[str] = None
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None

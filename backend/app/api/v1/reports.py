@@ -14,12 +14,12 @@ def get_dashboard_stats(
     current_user: User = Depends(get_current_active_user)
 ):
     # 1. Active Employees Count
-    users_ref = db.collection('users')
+    users_ref = db.collection('users').where('department_id', '==', current_user.department_id)
     users_docs = list(users_ref.stream())
     employees_count = len(users_docs)
     
     # 2. Pending Tasks Count & High Priority Tasks
-    tasks_ref = db.collection('tasks')
+    tasks_ref = db.collection('tasks').where('department_id', '==', current_user.department_id)
     tasks_docs = list(tasks_ref.stream())
     
     total_tasks = len(tasks_docs)
@@ -41,7 +41,7 @@ def get_dashboard_stats(
 
 
     # 3. Approvals Count
-    approvals_ref = db.collection('approvals')
+    approvals_ref = db.collection('approvals').where('department_id', '==', current_user.department_id)
     app_docs = list(approvals_ref.stream())
     approvals_count = len(app_docs)
     waiting_approvals = sum(1 for a in app_docs if a.to_dict().get("status") == "Pending")
@@ -93,10 +93,10 @@ def get_department_report_summary(
     db: Client = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    users_ref = db.collection('users')
+    users_ref = db.collection('users').where('department_id', '==', current_user.department_id)
     active_faculty = len(list(users_ref.stream()))
 
-    tasks_ref = db.collection('tasks')
+    tasks_ref = db.collection('tasks').where('department_id', '==', current_user.department_id)
     tasks_docs = list(tasks_ref.stream())
     total_tasks = len(tasks_docs)
     completed_tasks = sum(1 for t in tasks_docs if t.to_dict().get("status") in ["Completed", "COMPLETED"])

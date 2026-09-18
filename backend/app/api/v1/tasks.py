@@ -11,38 +11,7 @@ from app.api.v1.notifications import trigger_notification
 
 router = APIRouter()
 
-DEFAULT_TASKS = [
-    {
-        "id": "tsk_1",
-        "title": "AI Lab Maintenance",
-        "assigned": "Mrs. Neha Gurnani",
-        "deadline": "05 August 2026", # Intentionally past to test overdue/risk
-        "priority": "High",
-        "status": "In Progress",
-        "progress": "75%",
-        "created_at": "2026-08-01T10:00:00Z"
-    },
-    {
-        "id": "tsk_2",
-        "title": "Final Year Project Review",
-        "assigned": "Dr. Animesh Tayal",
-        "deadline": "10 August 2026",
-        "priority": "Medium",
-        "status": "Pending Approval",
-        "progress": "50%",
-        "created_at": "2026-08-01T10:00:00Z"
-    },
-    {
-        "id": "tsk_3",
-        "title": "Student Research Tracking",
-        "assigned": "Dr. Bhushan Mahendra Manjre",
-        "deadline": "15 August 2026",
-        "priority": "Low",
-        "status": "Completed",
-        "progress": "100%",
-        "created_at": "2026-08-01T10:00:00Z"
-    }
-]
+
 
 def calculate_task_risk(task: Dict[str, Any], faculty_workload: int) -> Dict[str, Any]:
     """
@@ -144,11 +113,11 @@ def get_tasks(
     db: Client = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    tasks_ref = db.collection('tasks')
+    tasks_ref = db.collection('tasks').where('department_id', '==', current_user.department_id)
     docs = list(tasks_ref.stream())
     tasks = []
     
-    all_raw_tasks = [doc.to_dict() for doc in docs] if docs else DEFAULT_TASKS
+    all_raw_tasks = [doc.to_dict() for doc in docs]
 
     # Precompute faculty workload (count of active tasks per assignee)
     workload_map = {}
@@ -222,6 +191,7 @@ def create_task(
     db_task = task.dict()
     db_task['id'] = task_id
     db_task['created_at'] = datetime.utcnow().isoformat()
+    db_task['department_id'] = current_user.department_id
     
     # Save to Firestore
     db.collection('tasks').document(task_id).set(db_task)
@@ -261,15 +231,8 @@ def get_task(
     
     data = None
     if not doc.exists:
-        for t in DEFAULT_TASKS:
-            if t["id"] == task_id:
-                data = t
-                break
-        if not data:
-            raise HTTPException(status_code=404, detail="Task not found")
-    else:
-        data = doc.to_dict()
-        
+        raise HTTPException(status_code=404, detail="Task not found")
+    data = doc.to_dict()
     if current_user.role == RoleEnum.FACULTY:
         is_assigned = False
         a_ids = data.get("assignee_ids", [])

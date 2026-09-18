@@ -84,11 +84,12 @@ def get_notifications(
     current_user: User = Depends(get_current_active_user)
 ):
     notifs_ref = db.collection('notifications')
-    docs = list(notifs_ref.where('user_id', 'in', [current_user.id, 'department']).stream())
+    docs = list(notifs_ref.where('user_id', '==', current_user.id).stream())
     notifications = []
     if docs:
         for doc in docs:
             notifications.append(doc.to_dict())
+        notifications.sort(key=lambda x: x.get('created_at', ''), reverse=True)
     else:
         notifications = DEFAULT_NOTIFICATIONS
     return notifications
@@ -99,7 +100,7 @@ def get_unread_count(
     current_user: User = Depends(get_current_active_user)
 ):
     notifs_ref = db.collection('notifications')
-    docs = list(notifs_ref.where('user_id', 'in', [current_user.id, 'department']).stream())
+    docs = list(notifs_ref.where('user_id', '==', current_user.id).stream())
     if docs:
         unread = sum(1 for d in docs if not d.to_dict().get("is_read", False))
     else:
@@ -117,8 +118,7 @@ def create_notification(
     db_notif["id"] = notif_id
     db_notif["user_id"] = current_user.id
     db_notif["created_at"] = datetime.utcnow().isoformat()
-    if not db_notif.get("time"):
-        db_notif["time"] = "Just now"
+    
     
     db.collection('notifications').document(notif_id).set(db_notif)
     return db_notif
@@ -167,7 +167,7 @@ def mark_all_read(
     current_user: User = Depends(get_current_active_user)
 ):
     notifs_ref = db.collection('notifications')
-    docs = list(notifs_ref.where('user_id', 'in', [current_user.id, 'department']).stream())
+    docs = list(notifs_ref.where('user_id', '==', current_user.id).stream())
     if docs:
         for doc in docs:
             doc.reference.update({"is_read": True, "status": "Read"})
@@ -222,7 +222,6 @@ def trigger_notification(
         "user_id": user_id,
         "title": title,
         "message": message,
-        "time": "Just now",
         "type": notif_type,
         "priority": priority,
         "target_route": target_route,

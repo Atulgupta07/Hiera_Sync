@@ -23,6 +23,7 @@ def create_task_request(
     db_req['id'] = req_id
     db_req['requester_id'] = current_user.id
     db_req['requester_name'] = current_user.name
+    db_req['department_id'] = current_user.department_id
     db_req['status'] = "PENDING"
     db_req['created_at'] = datetime.utcnow().isoformat()
     db_req['reviewed_at'] = None
@@ -32,17 +33,20 @@ def create_task_request(
     
     db.collection('task_requests').document(req_id).set(db_req)
     
-    # Notify department that a new request is pending
-    trigger_notification(
-        db, 
-        "department", 
-        "TASK REQUEST", 
-        "New Task Request", 
-        f"{current_user.name} has requested a new task: {request.title}", 
-        "/task-requests",
-        "Medium",
-        "🟡"
-    )
+    # Notify department HODs
+    users_ref = db.collection('users').where('department_id', '==', current_user.department_id).where('role', '==', RoleEnum.HOD.value)
+    hods = users_ref.stream()
+    for hod in hods:
+        trigger_notification(
+            db, 
+            hod.id, 
+            "TASK REQUEST", 
+            "New Task Request", 
+            f"{current_user.name} has requested a new task: {request.title}", 
+            "/task-requests",
+            "Medium",
+            "dYY"
+        )
     
     return db_req
 
@@ -56,8 +60,8 @@ def get_task_requests(
         # Teachers see their own requests
         docs = list(requests_ref.where('requester_id', '==', current_user.id).stream())
     else:
-        # HODs see all
-        docs = list(requests_ref.stream())
+        # HODs see all from their department
+        docs = list(requests_ref.where('department_id', '==', current_user.department_id).stream())
         
     return [doc.to_dict() for doc in docs]
 

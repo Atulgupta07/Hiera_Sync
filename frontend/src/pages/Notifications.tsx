@@ -26,6 +26,32 @@ import {
 
 import "./Notifications.css";
 
+
+const getRelativeTime = (timestamp?: string) => {
+  if (!timestamp) return "Date unavailable";
+  const date = new Date(timestamp);
+  if (isNaN(date.getTime())) return "Date unavailable";
+  
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  if (diffInSeconds < 60) return "Just now";
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+  if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600);
+    return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
+  }
+  if (diffInSeconds < 172800) return "Yesterday";
+  return `${Math.floor(diffInSeconds / 86400)} days ago`;
+};
+
+const getExactTime = (timestamp?: string) => {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  if (isNaN(date.getTime())) return "";
+  return date.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+};
+
 export default function Notifications() {
   const navigate = useNavigate();
   const {
@@ -565,7 +591,7 @@ export default function Notifications() {
                     <div className="nc-card-meta">
                       <span className="nc-card-meta-item">
                         <Clock size={12} />
-                        <span>{notif.time || "Recent"}</span>
+                        <span title={getExactTime(notif.created_at)}>{getRelativeTime(notif.created_at)}</span>
                       </span>
 
                       {notif.status && (
@@ -666,7 +692,7 @@ export default function Notifications() {
             </div>
 
             <div className="flex items-center justify-between text-xs text-[#737373] px-1">
-              <span>Received: {selectedNotif.time || "Recent"}</span>
+              <span>Received: {getExactTime(selectedNotif.created_at) || getRelativeTime(selectedNotif.created_at)}</span>
               <span>Status: {selectedNotif.is_read ? "Read" : "Unread"}</span>
             </div>
 

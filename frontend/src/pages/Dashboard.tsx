@@ -7,6 +7,7 @@ import {
   AIDashboardSummaryResponse,
 } from "../types";
 import { useAuth } from "../contexts/AuthContext";
+import FacultyDashboard from "./FacultyDashboard";
 
 import {
   Users,
@@ -49,6 +50,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (user?.role === "FACULTY") return; // No need to fetch admin stats
+
     const fetchData = async () => {
       try {
         const [statsData, actData, aiData] =
@@ -77,7 +80,11 @@ export default function Dashboard() {
     };
 
     fetchData();
-  }, []);
+  }, [user?.role]);
+
+  if (user?.role === "FACULTY") {
+    return <FacultyDashboard />;
+  }
 
   if (loading) {
     return (
