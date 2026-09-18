@@ -314,7 +314,8 @@ def get_active_project_context(db: Client, current_user: User):
         "approvals": approvals,
         "pending_approvals": pending_approvals if pending_approvals else approvals,
         "events": events,
-        "upcoming_events": upcoming_events if upcoming_events else events
+        "upcoming_events": upcoming_events if upcoming_events else events,
+        "_db": db
     }
 
 def execute_local_fallback_query(query: str, current_user: User, context: dict) -> str:
@@ -367,8 +368,13 @@ def execute_local_fallback_query(query: str, current_user: User, context: dict) 
             msg += f"  * **Priority**: `{priority}` | **Status**: `{status}`\n\n"
         return msg
 
-    # Intent 3: Calendar / Events / Schedule
-    elif any(k in q for k in ["calendar", "event", "schedule", "deadline", "upcoming", "meeting", "hackathon", "workshop"]):
+    # Intent 3: Calendar / Events / Schedule / Institutional Activities
+    elif any(k in q for k in ["calendar", "event", "schedule", "deadline", "upcoming", "meeting", "hackathon", "workshop", "assessment", "exam", "fdp", "activity", "activities", "holiday", "tomorrow", "this week", "next week", "this month", "september", "october", "november", "december", "january", "february", "march", "april", "may", "june", "july", "august"]):
+        if context.get("_db"):
+            from app.services.institutional_ai import query_institutional_calendar
+            res = query_institutional_calendar(context.get("_db"), current_user, query)
+            if res and res.get("answer"):
+                return res.get("answer")
         if not upcoming_events:
             return "### 📅 Upcoming Departmental Calendar\n\nNo upcoming events or deadlines currently scheduled."
 

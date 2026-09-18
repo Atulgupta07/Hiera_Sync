@@ -78,20 +78,56 @@ DEFAULT_NOTIFICATIONS = [
     }
 ]
 
+def format_relative_time(created_at_str: Optional[str]) -> str:
+    if not created_at_str:
+        return "Just now"
+    try:
+        clean_str = created_at_str.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(clean_str)
+        if dt.tzinfo is not None:
+            now = datetime.now(dt.tzinfo)
+        else:
+            now = datetime.utcnow()
+        
+        diff = now - dt
+        total_seconds = int(diff.total_seconds())
+        if total_seconds < 60:
+            return "Just now"
+        minutes = total_seconds // 60
+        if minutes < 60:
+            return f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+        hours = minutes // 60
+        if hours < 24:
+            return f"{hours} hour{'s' if hours != 1 else ''} ago"
+        days = hours // 24
+        if days == 1:
+            return "1 day ago"
+        if days < 7:
+            return f"{days} days ago"
+        return dt.strftime("%b %d, %Y")
+    except Exception:
+        return "Just now"
+
 @router.get("/", response_model=List[NotificationResponse])
 def get_notifications(
     db: Client = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     notifs_ref = db.collection('notifications')
-    docs = list(notifs_ref.where('user_id', '==', current_user.id).stream())
+    docs = list(notifs_ref.where('user_id', 'in', [current_user.id, 'department']).stream())
     notifications = []
     if docs:
         for doc in docs:
-            notifications.append(doc.to_dict())
-        notifications.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+            data = doc.to_dict()
+            if data.get("created_at"):
+                data["time"] = format_relative_time(data.get("created_at"))
+            notifications.append(data)
     else:
-        notifications = DEFAULT_NOTIFICATIONS
+        for n in DEFAULT_NOTIFICATIONS:
+            item = dict(n)
+            if item.get("created_at"):
+                item["time"] = format_relative_time(item.get("created_at"))
+            notifications.append(item)
     return notifications
 
 @router.get("/unread-count", response_model=UnreadCountResponse)
@@ -100,7 +136,7 @@ def get_unread_count(
     current_user: User = Depends(get_current_active_user)
 ):
     notifs_ref = db.collection('notifications')
-    docs = list(notifs_ref.where('user_id', '==', current_user.id).stream())
+    docs = list(notifs_ref.where('user_id', 'in', [current_user.id, 'department']).stream())
     if docs:
         unread = sum(1 for d in docs if not d.to_dict().get("is_read", False))
     else:
@@ -118,7 +154,8 @@ def create_notification(
     db_notif["id"] = notif_id
     db_notif["user_id"] = current_user.id
     db_notif["created_at"] = datetime.utcnow().isoformat()
-    
+    if not db_notif.get("time"):
+        db_notif["time"] = "Just now"
     
     db.collection('notifications').document(notif_id).set(db_notif)
     return db_notif
@@ -136,11 +173,16 @@ def mark_read(
             if n["id"] == notification_id:
                 n["is_read"] = True
                 n["status"] = "Read"
+                if n.get("created_at"):
+                    n["time"] = format_relative_time(n["created_at"])
                 return n
         raise HTTPException(status_code=404, detail="Notification not found")
     
     doc_ref.update({"is_read": True, "status": "Read"})
-    return doc_ref.get().to_dict()
+    data = doc_ref.get().to_dict()
+    if data.get("created_at"):
+        data["time"] = format_relative_time(data.get("created_at"))
+    return data
 
 @router.put("/{notification_id}/unread", response_model=NotificationResponse)
 def mark_unread(
@@ -155,11 +197,16 @@ def mark_unread(
             if n["id"] == notification_id:
                 n["is_read"] = False
                 n["status"] = "Unread"
+                if n.get("created_at"):
+                    n["time"] = format_relative_time(n["created_at"])
                 return n
         raise HTTPException(status_code=404, detail="Notification not found")
     
     doc_ref.update({"is_read": False, "status": "Unread"})
-    return doc_ref.get().to_dict()
+    data = doc_ref.get().to_dict()
+    if data.get("created_at"):
+        data["time"] = format_relative_time(data.get("created_at"))
+    return data
 
 @router.put("/read-all")
 def mark_all_read(
@@ -167,7 +214,7 @@ def mark_all_read(
     current_user: User = Depends(get_current_active_user)
 ):
     notifs_ref = db.collection('notifications')
-    docs = list(notifs_ref.where('user_id', '==', current_user.id).stream())
+    docs = list(notifs_ref.where('user_id', 'in', [current_user.id, 'department']).stream())
     if docs:
         for doc in docs:
             doc.reference.update({"is_read": True, "status": "Read"})
@@ -222,6 +269,7 @@ def trigger_notification(
         "user_id": user_id,
         "title": title,
         "message": message,
+        "time": "Just now",
         "type": notif_type,
         "priority": priority,
         "target_route": target_route,

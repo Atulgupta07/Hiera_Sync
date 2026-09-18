@@ -26,31 +26,57 @@ import {
 
 import "./Notifications.css";
 
-
-const getRelativeTime = (timestamp?: string) => {
-  if (!timestamp) return "Date unavailable";
-  const date = new Date(timestamp);
-  if (isNaN(date.getTime())) return "Date unavailable";
-  
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
-  if (diffInSeconds < 60) return "Just now";
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
-  if (diffInSeconds < 86400) {
-    const hours = Math.floor(diffInSeconds / 3600);
-    return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
+/**
+ * Accurately formats the elapsed time from a notification's existing `created_at` timestamp.
+ * - < 1 minute: "Just now"
+ * - < 60 minutes: "X minutes ago"
+ * - < 24 hours: "X hours ago"
+ * - 1 day: "1 day ago"
+ * - 2-6 days: "X days ago"
+ * - Older: formatted date (e.g., "Aug 2, 2026")
+ */
+function formatNotificationTime(createdAt?: string, fallbackTime?: string): string {
+  if (!createdAt) {
+    return fallbackTime || "Just now";
   }
-  if (diffInSeconds < 172800) return "Yesterday";
-  return `${Math.floor(diffInSeconds / 86400)} days ago`;
-};
 
-const getExactTime = (timestamp?: string) => {
-  if (!timestamp) return "";
-  const date = new Date(timestamp);
-  if (isNaN(date.getTime())) return "";
-  return date.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
-};
+  const createdDate = new Date(createdAt);
+  if (isNaN(createdDate.getTime())) {
+    return fallbackTime || "Just now";
+  }
+
+  const now = new Date();
+  const diffMs = now.getTime() - createdDate.getTime();
+
+  // If created within the last 60 seconds (or slight future clock skew)
+  if (diffMs < 60 * 1000) {
+    return "Just now";
+  }
+
+  const diffMinutes = Math.floor(diffMs / (60 * 1000));
+  if (diffMinutes < 60) {
+    return `${diffMinutes} minute${diffMinutes === 1 ? "" : "s"} ago`;
+  }
+
+  const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
+  if (diffHours < 24) {
+    return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
+  }
+
+  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+  if (diffDays === 1) {
+    return "1 day ago";
+  }
+  if (diffDays < 7) {
+    return `${diffDays} days ago`;
+  }
+
+  return createdDate.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: createdDate.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+  });
+}
 
 export default function Notifications() {
   const navigate = useNavigate();
@@ -591,7 +617,7 @@ export default function Notifications() {
                     <div className="nc-card-meta">
                       <span className="nc-card-meta-item">
                         <Clock size={12} />
-                        <span title={getExactTime(notif.created_at)}>{getRelativeTime(notif.created_at)}</span>
+                        <span>{formatNotificationTime(notif.created_at, notif.time)}</span>
                       </span>
 
                       {notif.status && (
@@ -692,7 +718,7 @@ export default function Notifications() {
             </div>
 
             <div className="flex items-center justify-between text-xs text-[#737373] px-1">
-              <span>Received: {getExactTime(selectedNotif.created_at) || getRelativeTime(selectedNotif.created_at)}</span>
+              <span>Received: {formatNotificationTime(selectedNotif.created_at, selectedNotif.time)}</span>
               <span>Status: {selectedNotif.is_read ? "Read" : "Unread"}</span>
             </div>
 

@@ -7,3 +7,6 @@ python-multipart
 pydantic[email]
 pydantic-settings
 APScheduler
+pypdf
+python-docx
+openpyxl

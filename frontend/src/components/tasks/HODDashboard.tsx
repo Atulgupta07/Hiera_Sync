@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
-import { tasksApi, employeesApi, aiApi } from "../../api";
-import { TaskResponse, EmployeeResponse, HODActionItem, FacultyPerformance } from "../../types";
-import { CheckCircle, Clock, AlertCircle, PlayCircle, Plus, Search, Calendar as CalendarIcon, AlignJustify, GitCommit, ChevronRight, Activity, Users, FileText } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { tasksApi, employeesApi, aiApi, attachmentsApi } from "../../api";
+import { TaskResponse, EmployeeResponse, TaskCreate, HODActionItem, FacultyPerformance } from "../../types";
+import { CheckCircle, Clock, AlertCircle, PlayCircle, Plus, Search, Calendar as CalendarIcon, AlignJustify, GitCommit, ChevronRight, Activity, Users, FileText, Paperclip, X } from "lucide-react";
 import TaskDetailsModal from "./TaskDetailsModal";
-import CreateTaskModal from "./CreateTaskModal";
 import { TaskCalendarView, TaskTimelineView } from "./TaskViews";
 import { analyticsApi } from "../../api/analytics";
 
@@ -15,7 +14,16 @@ export default function HODDashboard() {
   const [hodActions, setHodActions] = useState<HODActionItem[]>([]);
   const [facultyPerformance, setFacultyPerformance] = useState<FacultyPerformance[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
+  const [taskForm, setTaskForm] = useState<TaskCreate>({
+    title: "", description: "", category: "General", assigned: "", assigned_id: "",
+    start_date: "", deadline: "", deadline_time: "", priority: "High",
+    estimated_effort: "", reminder: "1 day before", require_approval: false,
+    status: "Pending", progress: "0%", subtasks: []
+  });
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [currentView, setCurrentView] = useState<"LIST" | "CALENDAR" | "TIMELINE">("LIST");
@@ -55,6 +63,38 @@ export default function HODDashboard() {
       setLoading(false);
     }
   };
+
+  const handleCreateTask = async () => {
+    if(!taskForm.title || !taskForm.assigned_id || !taskForm.deadline) {
+      alert("Please fill required fields: Title, Assigned Faculty, and Deadline Date");
+      return;
+    }
+    const selectedFac = facultyList.find(f => f.id === taskForm.assigned_id);
+    const payload: TaskCreate = { ...taskForm, assigned: selectedFac ? selectedFac.name : "" };
+    try {
+      const createdTask = await tasksApi.create(payload);
+      if (attachedFile && createdTask?.id) {
+        try {
+          await attachmentsApi.upload(createdTask.id, attachedFile);
+        } catch (uploadErr: any) {
+          console.error("Document upload failed:", uploadErr);
+          alert("Task was created, but failed to attach document: " + (uploadErr.message || "Upload failed"));
+        }
+      }
+      setShowForm(false);
+      setAttachedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setTaskForm({
+        title: "", description: "", category: "General", assigned: "", assigned_id: "",
+        start_date: "", deadline: "", deadline_time: "", priority: "High",
+        estimated_effort: "", reminder: "1 day before", require_approval: false,
+        status: "Pending", progress: "0%", subtasks: []
+      });
+      await fetchData();
+    } catch(err: any) {
+      alert("Error creating task: " + err.message);
+    }
+  };
   
   const handleApproval = async (task: TaskResponse, approved: boolean) => {
     const newStatus = approved ? "Completed" : "In Progress";
@@ -88,7 +128,13 @@ export default function HODDashboard() {
           <h1 className="text-3xl font-bold text-slate-800">Department Task Management</h1>
           <p className="text-slate-500 mt-1">Manage department activities, deadlines and approvals</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-medium shadow-sm hover:bg-indigo-700 flex items-center gap-2">
+        <button onClick={() => {
+          if (showForm) {
+            setAttachedFile(null);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+          }
+          setShowForm(!showForm);
+        }} className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-medium shadow-sm hover:bg-indigo-700 flex items-center gap-2">
           <Plus className="w-5 h-5"/> {showForm ? "Cancel Creation" : "Add New Task"}
         </button>
       </div>
@@ -119,10 +165,104 @@ export default function HODDashboard() {
       </div>
 
       {showForm && (
-        <CreateTaskModal 
-          onClose={() => setShowForm(false)} 
-          onSuccess={() => { setShowForm(false); fetchData(); }} 
-        />
+        <div className="bg-white rounded-2xl shadow-md border border-indigo-100 p-6 mb-8">
+          <h2 className="text-xl font-bold text-indigo-900 mb-4 border-b pb-2">Create New Task</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Task Name *</label>
+              <input type="text" className="w-full border p-2.5 rounded-lg bg-slate-50 focus:bg-white" value={taskForm.title} onChange={e => setTaskForm({...taskForm, title: e.target.value})} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Assign To *</label>
+              <select className="w-full border p-2.5 rounded-lg bg-slate-50 focus:bg-white" value={taskForm.assigned_id} onChange={e => setTaskForm({...taskForm, assigned_id: e.target.value})}>
+                <option value="">-- Select Faculty --</option>
+                {facultyList.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+              <textarea className="w-full border p-2.5 rounded-lg bg-slate-50 focus:bg-white" rows={2} value={taskForm.description} onChange={e => setTaskForm({...taskForm, description: e.target.value})}></textarea>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
+              <input type="date" className="w-full border p-2.5 rounded-lg bg-slate-50 focus:bg-white" value={taskForm.start_date} onChange={e => setTaskForm({...taskForm, start_date: e.target.value})} />
+            </div>
+            <div className="flex gap-2">
+               <div className="flex-1">
+                 <label className="block text-sm font-medium text-slate-700 mb-1">Deadline Date *</label>
+                 <input type="date" className="w-full border p-2.5 rounded-lg bg-slate-50 focus:bg-white" value={taskForm.deadline} onChange={e => setTaskForm({...taskForm, deadline: e.target.value})} />
+               </div>
+               <div className="flex-1">
+                 <label className="block text-sm font-medium text-slate-700 mb-1">Deadline Time</label>
+                 <input type="time" className="w-full border p-2.5 rounded-lg bg-slate-50 focus:bg-white" value={taskForm.deadline_time} onChange={e => setTaskForm({...taskForm, deadline_time: e.target.value})} />
+               </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Priority & Estimated Effort</label>
+              <div className="flex gap-2">
+                 <select className="flex-1 border p-2.5 rounded-lg bg-slate-50" value={taskForm.priority} onChange={e => setTaskForm({...taskForm, priority: e.target.value})}>
+                    <option>High</option><option>Medium</option><option>Low</option>
+                 </select>
+                 <input type="text" placeholder="e.g. 4 hours" className="flex-1 border p-2.5 rounded-lg bg-slate-50" value={taskForm.estimated_effort} onChange={e => setTaskForm({...taskForm, estimated_effort: e.target.value})} />
+              </div>
+            </div>
+            <div className="flex items-end pb-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500" checked={taskForm.require_approval} onChange={e => setTaskForm({...taskForm, require_approval: e.target.checked})} />
+                <span className="text-sm font-medium text-slate-700">Require HOD Approval to Complete</span>
+              </label>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Attach Document</label>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setAttachedFile(e.target.files[0]);
+                  }
+                }}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.png,.jpg,.jpeg"
+              />
+              {!attachedFile ? (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg bg-slate-50 hover:bg-slate-100 text-sm font-medium text-slate-700 transition"
+                >
+                  <Paperclip className="w-4 h-4 text-indigo-600" />
+                  <span>Upload Document</span>
+                </button>
+              ) : (
+                <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-200 px-3.5 py-2 rounded-lg">
+                  <Paperclip className="w-4 h-4 text-indigo-600 shrink-0" />
+                  <span className="text-sm font-semibold text-indigo-950 truncate max-w-xs">{attachedFile.name}</span>
+                  <span className="text-xs text-slate-500 font-medium">({(attachedFile.size / 1024).toFixed(1)} KB)</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAttachedFile(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    className="text-slate-400 hover:text-red-500 p-0.5 ml-1 transition"
+                    title="Remove file"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="mt-6 flex justify-end gap-3">
+             <button onClick={() => {
+               setShowForm(false);
+               setAttachedFile(null);
+               if (fileInputRef.current) fileInputRef.current.value = "";
+             }} className="px-5 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Cancel</button>
+             <button onClick={handleCreateTask} className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700">Create Task</button>
+          </div>
+        </div>
       )}
 
       {/* Main Content Area */}
@@ -178,7 +318,7 @@ export default function HODDashboard() {
                   {filteredTasks.map(task => (
                     <tr key={task.id} className="hover:bg-slate-50/50 cursor-pointer" onClick={() => setSelectedTask(task)}>
                       <td className="px-5 py-3 font-medium text-slate-800">{task.title}</td>
-                      <td className="px-5 py-3">{task.assignees && task.assignees.length > 1 ? `${task.assignees[0]} +${task.assignees.length - 1}` : task.assigned}</td>
+                      <td className="px-5 py-3">{task.assigned}</td>
                       <td className="px-5 py-3">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                           task.priority === 'High' ? 'bg-red-100 text-red-700' : task.priority === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
