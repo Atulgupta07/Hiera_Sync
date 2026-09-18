@@ -70,13 +70,43 @@ class TokenData(BaseModel):
 
 # Dashboard & Report Schemas
 class DashboardStatsResponse(BaseModel):
-    employees_count: int
-    pending_tasks_count: int
-    high_priority_tasks: int
-    approvals_count: int
-    waiting_approvals: int
-    ai_productivity: str = "92%"
-    workflow_progress: float = 75.0
+    employees_count: int = 0
+    pending_tasks_count: int = 0
+    high_priority_tasks: int = 0
+    total_tasks_count: int = 0
+    completed_tasks_count: int = 0
+    in_progress_tasks_count: int = 0
+    overdue_tasks_count: int = 0
+    requests_count: int = 0
+    pending_requests_count: int = 0
+    approved_requests_count: int = 0
+    rejected_requests_count: int = 0
+    goals_count: int = 0
+    completed_goals_count: int = 0
+    in_progress_goals_count: int = 0
+    at_risk_goals_count: int = 0
+    approvals_count: int = 0
+    waiting_approvals: int = 0
+    ai_productivity: str = "0%"
+    workflow_progress: float = 0.0
+    completion_rate: str = "0%"
+
+class FacultyDashboardStatsResponse(BaseModel):
+    my_total_tasks: int = 0
+    my_active_tasks: int = 0
+    my_pending_tasks: int = 0
+    my_in_progress_tasks: int = 0
+    my_completed_tasks: int = 0
+    my_overdue_tasks: int = 0
+    my_total_requests: int = 0
+    my_pending_requests: int = 0
+    my_approved_requests: int = 0
+    my_rejected_requests: int = 0
+    my_total_goals: int = 0
+    my_active_goals: int = 0
+    my_goal_progress: float = 0.0
+    unread_notifications: int = 0
+    upcoming_deadlines_count: int = 0
 
 class ActivityLogResponse(BaseModel):
     id: str
@@ -86,11 +116,21 @@ class ActivityLogResponse(BaseModel):
     timestamp: Optional[str] = None
 
 class DepartmentReportSummary(BaseModel):
-    total_tasks: int
-    completed_tasks: int
-    active_faculty: int
-    ai_efficiency: str = "92%"
-    completion_rate: str = "66%"
+    total_tasks: int = 0
+    completed_tasks: int = 0
+    pending_tasks: int = 0
+    in_progress_tasks: int = 0
+    overdue_tasks: int = 0
+    active_faculty: int = 0
+    ai_efficiency: str = "0%"
+    completion_rate: str = "0%"
+
+class AnalyticsReportResponse(BaseModel):
+    task_metrics: dict
+    request_metrics: dict
+    goal_metrics: dict
+    faculty_workload: List[dict] = Field(default_factory=list)
+    academic_activity: dict = Field(default_factory=dict)
 
 # Event Schemas
 class EventCreate(BaseModel):
@@ -116,6 +156,13 @@ class EventCreate(BaseModel):
     notes: Optional[str] = None
     send_whatsapp_reminder: Optional[bool] = False
     reminder_timing: Optional[str] = "1 day before"
+    is_institutional: Optional[bool] = False
+    academic_year: Optional[str] = None
+    semester: Optional[str] = None
+    approved_by: Optional[str] = None
+    approved_by_name: Optional[str] = None
+    published_at: Optional[str] = None
+    source: Optional[str] = "MANUAL"
 
 class EventUpdate(BaseModel):
     title: Optional[str] = None
@@ -140,6 +187,13 @@ class EventUpdate(BaseModel):
     notes: Optional[str] = None
     send_whatsapp_reminder: Optional[bool] = None
     reminder_timing: Optional[str] = None
+    is_institutional: Optional[bool] = None
+    academic_year: Optional[str] = None
+    semester: Optional[str] = None
+    approved_by: Optional[str] = None
+    approved_by_name: Optional[str] = None
+    published_at: Optional[str] = None
+    source: Optional[str] = None
 
 class EventResponse(EventCreate):
     id: str
@@ -150,25 +204,108 @@ class EventResponse(EventCreate):
     class Config:
         from_attributes = True
 
-# Task Schemas
+# Institutional Academic Calendar Schemas
+class InstitutionalEventItem(BaseModel):
+    id: Optional[str] = None
+    title: str
+    date: str
+    start_date: str
+    end_date: Optional[str] = None
+    category: str = "Teaching & Learning"
+    description: Optional[str] = ""
+    location: Optional[str] = ""
+
+class InstitutionalCalendarUploadResponse(BaseModel):
+    draft_id: str
+    filename: str
+    file_url: str
+    academic_year: Optional[str] = "2026-2027"
+    semester: Optional[str] = "Odd Semester"
+    total_extracted: int
+    events: List[InstitutionalEventItem]
+    message: str
+
+class InstitutionalCalendarPublishRequest(BaseModel):
+    draft_id: Optional[str] = None
+    academic_year: Optional[str] = "2026-2027"
+    semester: Optional[str] = "Odd Semester"
+    events: List[InstitutionalEventItem]
+
+class InstitutionalCalendarHistoryItem(BaseModel):
+    id: str
+    event_id: Optional[str] = None
+    event_title: str
+    action_type: str  # "PUBLISH", "UPDATE", "DELETE", "ADD"
+    field_changed: Optional[str] = None
+    previous_value: Optional[str] = None
+    updated_value: Optional[str] = None
+    modified_by: str
+    modified_by_role: Optional[str] = "HOD"
+    modified_at: str
+
+class AICalendarQueryRequest(BaseModel):
+    question: str
+
+class AICalendarQueryResponse(BaseModel):
+    question: str
+    answer: str
+    sources_count: int = 0
+
+# Task Schemas & Request Management
+class RequestCommentBase(BaseModel):
+    content: str
+
+class RequestCommentCreate(RequestCommentBase):
+    pass
+
+class RequestCommentResponse(RequestCommentBase):
+    id: str
+    request_id: str
+    author_id: str
+    author_name: str
+    author_role: Optional[str] = None
+    created_at: str
+
+class RequestAttachmentBase(BaseModel):
+    file_name: str
+    file_type: str
+    file_size: int
+    storage_path: str
+    uploaded_by: str
+
+class RequestAttachmentResponse(RequestAttachmentBase):
+    id: str
+    request_id: str
+    created_at: str
+
 class TaskRequestBase(BaseModel):
     title: str
     description: str
-    category: str = "General"
-    priority: str = "Medium"
-    suggested_deadline: str
+    request_type: Optional[str] = "Task Request"
+    category: Optional[str] = "General"
+    priority: Optional[str] = "Medium"
+    suggested_deadline: Optional[str] = None
     estimated_effort: Optional[str] = None
     additional_notes: Optional[str] = None
     department_id: Optional[str] = None
+<<<<<<< HEAD
     attachments: Optional[List[dict]] = None
+=======
+>>>>>>> 1434925 (Add task document attachment support)
 
 class TaskRequestCreate(TaskRequestBase):
     pass
 
 class TaskRequestUpdate(BaseModel):
-    status: Optional[str] = None # PENDING, APPROVED, REJECTED
+    title: Optional[str] = None
+    description: Optional[str] = None
+    request_type: Optional[str] = None
+    priority: Optional[str] = None
+    suggested_deadline: Optional[str] = None
+    status: Optional[str] = None # PENDING, UNDER_REVIEW, APPROVED, REJECTED, COMPLETED, CANCELLED
     rejection_reason: Optional[str] = None
     created_task_id: Optional[str] = None
+    linked_task_id: Optional[str] = None
 
 class TaskRequestResponse(TaskRequestBase):
     id: str
@@ -176,10 +313,14 @@ class TaskRequestResponse(TaskRequestBase):
     requester_name: str
     status: str
     created_at: str
+    updated_at: Optional[str] = None
     reviewed_at: Optional[str] = None
     reviewed_by: Optional[str] = None
     rejection_reason: Optional[str] = None
     created_task_id: Optional[str] = None
+    linked_task_id: Optional[str] = None
+    attachments: Optional[List[dict]] = Field(default_factory=list)
+    comments: Optional[List[RequestCommentResponse]] = Field(default_factory=list)
 
 class TaskCommentCreate(BaseModel):
     content: str
@@ -239,11 +380,17 @@ class DepartmentGoalBase(BaseModel):
     title: str
     description: str
     category: str = "General"
+    priority: Optional[str] = "Medium"
     start_date: str
     target_date: str
+<<<<<<< HEAD
     status: str = "NOT_STARTED"
     department_id: Optional[str] = None
     progress: str = "0%"
+=======
+    status: str = "NOT_STARTED" # NOT_STARTED, IN_PROGRESS, AT_RISK, COMPLETED, OVERDUE
+    department_id: Optional[str] = None
+>>>>>>> 1434925 (Add task document attachment support)
 
 class DepartmentGoalCreate(DepartmentGoalBase):
     pass
@@ -252,16 +399,24 @@ class DepartmentGoalUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     category: Optional[str] = None
+    priority: Optional[str] = None
     start_date: Optional[str] = None
     target_date: Optional[str] = None
     status: Optional[str] = None
+    department_id: Optional[str] = None
 
 class DepartmentGoalResponse(DepartmentGoalBase):
     id: str
     owner_id: str
+    owner_name: Optional[str] = None
     created_at: str
     updated_at: str
+    progress: Optional[float] = 0.0
+    progress_pct: Optional[str] = "0%"
+    linked_tasks_count: Optional[int] = 0
+    completed_tasks_count: Optional[int] = 0
     milestones: List[GoalMilestoneResponse] = Field(default_factory=list)
+    linked_tasks: Optional[List[dict]] = Field(default_factory=list)
 
 class Subtask(BaseModel):
     id: str
@@ -283,11 +438,21 @@ class TaskCreate(BaseModel):
     reminder: Optional[str] = None
     require_approval: Optional[bool] = False
     assigned_id: Optional[str] = None
+<<<<<<< HEAD
     assignees: Optional[List[str]] = Field(default_factory=list)
     assignee_ids: Optional[List[str]] = Field(default_factory=list)
     subtasks: List[Subtask] = Field(default_factory=list)
     goal_id: Optional[str] = None
     department_id: Optional[str] = None
+=======
+    co_assignee_id: Optional[str] = None
+    co_assignee_name: Optional[str] = None
+    assignee_ids: Optional[List[str]] = Field(default_factory=list)
+    department_id: Optional[str] = None
+    subtasks: List[Subtask] = Field(default_factory=list)
+    goal_id: Optional[str] = None
+    linked_request_id: Optional[str] = None
+>>>>>>> 1434925 (Add task document attachment support)
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
@@ -304,10 +469,18 @@ class TaskUpdate(BaseModel):
     reminder: Optional[str] = None
     require_approval: Optional[bool] = None
     assigned_id: Optional[str] = None
+<<<<<<< HEAD
     assignees: Optional[List[str]] = None
     assignee_ids: Optional[List[str]] = None
+=======
+    co_assignee_id: Optional[str] = None
+    co_assignee_name: Optional[str] = None
+    assignee_ids: Optional[List[str]] = None
+    department_id: Optional[str] = None
+>>>>>>> 1434925 (Add task document attachment support)
     subtasks: Optional[List[Subtask]] = None
     goal_id: Optional[str] = None
+    linked_request_id: Optional[str] = None
 
 class TaskReviewRequest(BaseModel):
     decision: str
@@ -316,6 +489,7 @@ class TaskReviewRequest(BaseModel):
 class TaskResponse(TaskCreate):
     id: str
     created_at: Optional[str] = None
+    goal_title: Optional[str] = None
     risk_score: Optional[int] = None
     risk_level: Optional[str] = None
     risk_factors: Optional[List[str]] = Field(default_factory=list)
@@ -333,6 +507,7 @@ class ApprovalCreate(BaseModel):
     priority: str = "High"
     status: Optional[str] = "Pending"
     comments: Optional[str] = None
+    type: Optional[str] = "General"
 
 class ApprovalUpdate(BaseModel):
     status: Optional[str] = None

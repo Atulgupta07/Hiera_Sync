@@ -69,13 +69,20 @@ def validate_task_access(task_id: str, db: Client, current_user: User) -> dict:
     task_ref = db.collection('tasks').document(task_id)
     task_doc = task_ref.get()
     
+    task_data: dict = {}
     if not task_doc.exists:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Task not found"
-        )
-    
-    task_data: dict = task_doc.to_dict() or {}
+        from app.api.v1.tasks import DEFAULT_TASKS
+        for t in DEFAULT_TASKS:
+            if t.get("id") == task_id:
+                task_data = t
+                break
+        if not task_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail="Task not found"
+            )
+    else:
+        task_data = task_doc.to_dict() or {}
     
     assigned_id = task_data.get('assigned_id') or task_data.get('assigned_to')
     if current_user.role == RoleEnum.FACULTY and assigned_id != current_user.id:

@@ -34,11 +34,33 @@ class ApprovalStatusEnum(str, enum.Enum):
     APPROVED_PRINCIPAL = "APPROVED_PRINCIPAL"
     REJECTED = "REJECTED"
 
+class RequestTypeEnum(str, enum.Enum):
+    TASK_REQUEST = "Task Request"
+    DEADLINE_EXTENSION = "Deadline Extension Request"
+    LEAVE_REQUEST = "Leave Request"
+    EVENT_REQUEST = "Event Request"
+    DOCUMENT_REQUEST = "Document Request"
+    RESOURCE_REQUEST = "Resource Request"
+    COLLABORATION_REQUEST = "Collaboration Request"
+    GENERAL_REQUEST = "General Request"
+
+class RequestStatusEnum(str, enum.Enum):
+    PENDING = "PENDING"
+    UNDER_REVIEW = "UNDER_REVIEW"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
 class NotificationTypeEnum(str, enum.Enum):
     TASK_ASSIGNED = "TASK_ASSIGNED"
     EVENT_INVITE = "EVENT_INVITE"
     APPROVAL_REQUEST = "APPROVAL_REQUEST"
     SYSTEM_ALERT = "SYSTEM_ALERT"
+    REQUEST_SUBMITTED = "REQUEST_SUBMITTED"
+    REQUEST_APPROVED = "REQUEST_APPROVED"
+    REQUEST_REJECTED = "REQUEST_REJECTED"
+    REQUEST_COMMENT = "REQUEST_COMMENT"
 
 class User(BaseModel):
     id: str
@@ -68,6 +90,9 @@ class Task(BaseModel):
     description: Optional[str] = None
     creator_id: str
     assignee_id: Optional[str] = None
+    co_assignee_id: Optional[str] = None
+    co_assignee_name: Optional[str] = None
+    assignee_ids: Optional[List[str]] = None
     department_id: Optional[str] = None
     priority: PriorityEnum = PriorityEnum.MEDIUM
     due_date: Optional[datetime] = None
@@ -76,6 +101,8 @@ class Task(BaseModel):
     is_recurring: bool = False
     recurrence_pattern: Optional[str] = None
     ai_priority_score: float = 0.0
+    goal_id: Optional[str] = None
+    linked_request_id: Optional[str] = None
 
 class Event(BaseModel):
     id: str
@@ -101,6 +128,13 @@ class Event(BaseModel):
     creator_id: Optional[str] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+    is_institutional: Optional[bool] = False
+    academic_year: Optional[str] = None
+    semester: Optional[str] = None
+    approved_by: Optional[str] = None
+    approved_by_name: Optional[str] = None
+    published_at: Optional[str] = None
+    source: Optional[str] = "MANUAL"
 
 class Approval(BaseModel):
     id: str
@@ -132,3 +166,38 @@ class Document(BaseModel):
     file_path: str
     uploader_id: str
     uploaded_at: datetime = Field(default_factory=datetime.utcnow)
+
+class TaskRequest(BaseModel):
+    id: str
+    requester_id: str
+    requester_name: str
+    department_id: Optional[str] = None
+    request_type: str = "Task Request"
+    title: str
+    description: str
+    priority: str = "Medium"
+    status: str = "PENDING"
+    suggested_deadline: Optional[str] = None
+    estimated_effort: Optional[str] = None
+    additional_notes: Optional[str] = None
+    created_task_id: Optional[str] = None
+    linked_task_id: Optional[str] = None
+    rejection_reason: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    reviewed_at: Optional[str] = None
+    reviewed_by: Optional[str] = None
+
+class DepartmentGoal(BaseModel):
+    id: str
+    title: str
+    description: str
+    owner_id: str
+    department_id: Optional[str] = None
+    category: str = "General"
+    priority: str = "Medium"
+    start_date: str
+    target_date: str
+    status: str = "NOT_STARTED"
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None

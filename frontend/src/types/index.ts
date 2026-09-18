@@ -10,6 +10,8 @@ export interface UserBase {
   joining_date?: string;
   association?: string;
   avatar_url?: string;
+  phone?: string;
+  whatsapp_enabled?: boolean;
 }
 
 export interface UserResponse extends UserBase {
@@ -57,6 +59,8 @@ export interface EmployeeUpdate {
   association?: string;
   role?: RoleEnum;
   avatar_url?: string;
+  phone?: string;
+  whatsapp_enabled?: boolean;
 }
 
 export interface DashboardStatsResponse {
@@ -87,26 +91,125 @@ export interface DepartmentReportSummary {
 
 export interface EventCreate {
   title: string;
-  date: string;
+  date?: string;
+  start_date?: string;
+  start_time?: string;
+  end_date?: string;
+  end_time?: string;
+  category?: string;
   type?: string;
-  person: string;
-  description?: string;
+  person?: string;
+  organizer_id?: string;
+  organizer_name?: string;
+  participant_ids?: string[];
+  participant_names?: string[];
   location?: string;
+  description?: string;
+  priority?: string;
+  status?: string;
+  recurrence?: string;
+  meeting_link?: string;
+  notes?: string;
+  send_whatsapp_reminder?: boolean;
+  reminder_timing?: string;
+  is_institutional?: boolean;
+  academic_year?: string;
+  semester?: string;
+  approved_by?: string;
+  approved_by_name?: string;
+  published_at?: string;
+  source?: string;
 }
 
 export interface EventUpdate {
   title?: string;
   date?: string;
+  start_date?: string;
+  start_time?: string;
+  end_date?: string;
+  end_time?: string;
+  category?: string;
   type?: string;
   person?: string;
-  description?: string;
+  organizer_id?: string;
+  organizer_name?: string;
+  participant_ids?: string[];
+  participant_names?: string[];
   location?: string;
+  description?: string;
+  priority?: string;
+  status?: string;
+  recurrence?: string;
+  meeting_link?: string;
+  notes?: string;
+  send_whatsapp_reminder?: boolean;
+  reminder_timing?: string;
+  is_institutional?: boolean;
+  academic_year?: string;
+  semester?: string;
+  approved_by?: string;
+  approved_by_name?: string;
+  published_at?: string;
+  source?: string;
 }
 
 export interface EventResponse extends EventCreate {
   id: string;
   creator_id?: string;
   created_at?: string;
+  updated_at?: string;
+}
+
+export interface InstitutionalEventItem {
+  id?: string;
+  title: string;
+  date: string;
+  start_date: string;
+  end_date?: string;
+  category: string;
+  description?: string;
+  location?: string;
+}
+
+export interface InstitutionalCalendarUploadResponse {
+  draft_id: string;
+  filename: string;
+  file_url: string;
+  academic_year: string;
+  semester: string;
+  total_extracted: number;
+  events: InstitutionalEventItem[];
+  message: string;
+}
+
+export interface InstitutionalCalendarPublishRequest {
+  draft_id?: string;
+  academic_year?: string;
+  semester?: string;
+  events: InstitutionalEventItem[];
+}
+
+export interface InstitutionalCalendarHistoryItem {
+  id: string;
+  event_id?: string;
+  event_title: string;
+  action_type: string;
+  field_changed?: string;
+  previous_value?: string;
+  updated_value?: string;
+  modified_by: string;
+  modified_by_role?: string;
+  modified_at: string;
+}
+
+export interface AICalendarQueryRequest {
+  question: string;
+}
+
+export interface AICalendarQueryResponse {
+  question: string;
+  answer: string;
+  sources_count: number;
 }
 
 export interface Subtask {
@@ -172,6 +275,7 @@ export interface ApprovalCreate {
   priority?: string;
   status?: string;
   comments?: string;
+  type?: string;
 }
 
 export interface ApprovalUpdate {
@@ -397,6 +501,7 @@ export interface AIDashboardSummaryResponse {
   hod_actions?: HODActionItem[];
 }
 
+<<<<<<< HEAD
 export interface TaskAttachmentResponse {
   id: string;
   name: string;
@@ -430,3 +535,69 @@ export interface ReportResponse {
 export interface AIChecklistResponse {
   suggestions: string[];
 }
+=======
+export interface ConflictCheckRequest {
+  event_id?: string;
+  start_date: string;
+  start_time: string;
+  end_date: string;
+  end_time: string;
+  participant_ids: string[];
+  participant_names: string[];
+}
+
+export interface ConflictItem {
+  faculty_id?: string;
+  faculty_name: string;
+  conflicting_event_id: string;
+  conflicting_event_title: string;
+  start_date: string;
+  start_time: string;
+  end_date: string;
+  end_time: string;
+}
+
+export interface ConflictCheckResponse {
+  has_conflict: boolean;
+  conflicts: ConflictItem[];
+}
+
+export interface WhatsAppSendRequest {
+  faculty_id: string;
+  message: string;
+  template_name?: string;
+}
+
+export interface WhatsAppMessage {
+  id: string;
+  sender_id: string;
+  sender_name?: string;
+  recipient_id: string;
+  recipient_name?: string;
+  recipient_phone: string;
+  message: string;
+  message_type?: string;
+  template_name?: string;
+  status: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
+  provider_message_id?: string;
+  error_message?: string;
+  created_at: string;
+  sent_at?: string;
+}
+
+export interface WhatsAppFacultyStatus {
+  id: string;
+  name: string;
+  email: string;
+  designation?: string;
+  phone?: string;
+  whatsapp_enabled: boolean;
+  current_workload?: number;
+}
+
+export interface WhatsAppOptInUpdate {
+  phone?: string;
+  whatsapp_enabled: boolean;
+}
+
+>>>>>>> 1434925 (Add task document attachment support)
