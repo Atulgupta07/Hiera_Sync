@@ -318,6 +318,37 @@ def update_event(
     updated_doc = doc_ref.get().to_dict()
     normalized = normalize_event_dates(updated_doc)
 
+    # Track version history for institutional events
+    if old_data.get("is_institutional"):
+        changed_fields = []
+        prev_vals = []
+        upd_vals = []
+        for k, new_v in update_data.items():
+            if k in ["updated_at", "date", "type"]:
+                continue
+            old_v = old_data.get(k)
+            if old_v != new_v:
+                changed_fields.append(k)
+                prev_vals.append(f"{k}: {old_v}")
+                upd_vals.append(f"{k}: {new_v}")
+        if changed_fields:
+            hist_id = f"hist_{uuid.uuid4().hex[:10]}"
+            try:
+                db.collection('calendar_history').document(hist_id).set({
+                    "id": hist_id,
+                    "event_id": event_id,
+                    "event_title": updated_doc.get("title", old_data.get("title", "Institutional Activity")),
+                    "action_type": "UPDATE",
+                    "field_changed": ", ".join(changed_fields),
+                    "previous_value": "; ".join(prev_vals),
+                    "updated_value": "; ".join(upd_vals),
+                    "modified_by": current_user.name,
+                    "modified_by_role": current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role),
+                    "modified_at": datetime.utcnow().isoformat()
+                })
+            except Exception as e:
+                logger.error(f"Failed to log calendar history in events.py: {e}")
+
     # Check if rescheduled to notify participants
     date_changed = (
         ("start_date" in update_data and update_data["start_date"] != old_data.get("start_date")) or
@@ -380,6 +411,25 @@ def delete_event(
 
     doc_ref.delete()
     logger.info(f"Deleted department activity: {event_id}")
+
+    # Track deletion in Version History if institutional
+    if data.get("is_institutional"):
+        hist_id = f"hist_{uuid.uuid4().hex[:10]}"
+        try:
+            db.collection('calendar_history').document(hist_id).set({
+                "id": hist_id,
+                "event_id": event_id,
+                "event_title": title,
+                "action_type": "DELETE",
+                "field_changed": "status",
+                "previous_value": f"Scheduled on {start_date} ({data.get('category')})",
+                "updated_value": "Deleted from Official Institutional Calendar",
+                "modified_by": current_user.name,
+                "modified_by_role": current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role),
+                "modified_at": datetime.utcnow().isoformat()
+            })
+        except Exception as e:
+            logger.error(f"Failed to record calendar deletion history: {e}")
 
     # Notify participants of cancellation
     for pid in participants:
