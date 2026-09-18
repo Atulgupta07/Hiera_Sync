@@ -165,12 +165,52 @@ export default function HODDashboard() {
               <input type="text" className="w-full border p-2.5 rounded-lg bg-slate-50 focus:bg-white" value={taskForm.title} onChange={e => setTaskForm({...taskForm, title: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Assign To *</label>
-              <select className="w-full border p-2.5 rounded-lg bg-slate-50 focus:bg-white" value={taskForm.assigned_id} onChange={e => setTaskForm({...taskForm, assigned_id: e.target.value})}>
-                <option value="">-- Select Faculty --</option>
-                {facultyList.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-              </select>
-            </div>
+                <label className="block text-sm font-medium text-slate-700 mb-1 flex justify-between items-center">
+                  <span>Assigned Faculty *</span>
+                  <span className="text-xs text-slate-500 font-normal">
+                    {(taskForm.assignee_ids || []).length} / 2 Faculty assigned
+                    {(taskForm.assignee_ids || []).length === 2 && <span className="ml-2 text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-full">Collaborative Task</span>}
+                  </span>
+                </label>
+                
+                <div className="w-full border p-2.5 rounded-lg bg-slate-50 flex flex-col gap-2">
+                  {(taskForm.assignee_ids || []).map(id => {
+                    const fac = facultyList.find(f => f.id === id);
+                    return (
+                      <div key={id} className="flex justify-between items-center bg-white border border-slate-200 rounded px-3 py-1.5 shadow-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-400">👤</span>
+                          <span className="text-sm font-medium text-slate-700">{fac?.name}</span>
+                        </div>
+                        <button 
+                          type="button" 
+                          onClick={() => setTaskForm({...taskForm, assignee_ids: (taskForm.assignee_ids || []).filter(aid => aid !== id)})}
+                          className="text-slate-400 hover:text-red-500"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
+                  
+                  {(taskForm.assignee_ids || []).length < 2 && (
+                    <select 
+                      className="w-full mt-1 border-none bg-transparent text-sm text-indigo-600 font-medium focus:outline-none cursor-pointer" 
+                      value="" 
+                      onChange={e => {
+                        if(e.target.value && !(taskForm.assignee_ids || []).includes(e.target.value)) {
+                          setTaskForm({...taskForm, assignee_ids: [...(taskForm.assignee_ids || []), e.target.value]});
+                        }
+                      }}
+                    >
+                      <option value="">+ Add Faculty</option>
+                      {facultyList.filter(f => !(taskForm.assignee_ids || []).includes(f.id)).map(f => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
               <textarea className="w-full border p-2.5 rounded-lg bg-slate-50 focus:bg-white" rows={2} value={taskForm.description} onChange={e => setTaskForm({...taskForm, description: e.target.value})}></textarea>

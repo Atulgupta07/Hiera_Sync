@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { ReportResponse, ReportCreate, TaskAttachmentResponse } from '../../types';
+import { useState, useEffect } from 'react';
+import { ReportResponse, ReportCreate } from '../../types';
 import { reportsApi } from '../../api/reports';
-import { CheckCircle2, XCircle, Clock, Save, FileText, File } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Save, FileText } from 'lucide-react';
 
 export default function TaskReports({ taskId, role }: { taskId: string, role: string }) {
   const [reports, setReports] = useState<ReportResponse[]>([]);

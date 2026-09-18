@@ -5,7 +5,7 @@ import TaskComments from './TaskComments';
 import TaskAttachments from './TaskAttachments';
 import TaskReports from './TaskReports';
 import { aiApi } from '../../api';
-import { CheckSquare, Square, X, AlertTriangle, Clock, Save, FileText, User as UserIcon, CheckCircle2 } from 'lucide-react';
+import { CheckSquare, Square, X, AlertTriangle, Clock, FileText, User as UserIcon, CheckCircle2, BrainCircuit } from 'lucide-react';
 
 interface TaskDetailsModalProps {
   task: TaskResponse;
@@ -74,23 +74,6 @@ export default function TaskDetailsModal({ task, role, onClose, onUpdate, facult
       onUpdate();
     } catch (err) {
       alert("Failed to remove subtask.");
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  const submitForApproval = async () => {
-    setUpdating(true);
-    try {
-      await tasksApi.update(task.id, { progress: "100%", status: "Awaiting Approval" });
-      onUpdate();
-      setShowSuccessModal(true);
-      setTimeout(() => {
-        setShowSuccessModal(false);
-        onClose();
-      }, 2500);
-    } catch (err) {
-      alert("Failed to submit task.");
     } finally {
       setUpdating(false);
     }
@@ -166,7 +149,30 @@ export default function TaskDetailsModal({ task, role, onClose, onUpdate, facult
                  </div>
 
                  <div>
-                    <h3 className="text-sm font-bold flex items-center gap-2 text-slate-700 mb-3"><CheckSquare className="w-4 h-4"/> Checklist / Subtasks</h3>
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-sm font-bold flex items-center gap-2 text-slate-700"><CheckSquare className="w-4 h-4"/> Checklist / Subtasks</h3>
+                      {isHod && (
+                        <button 
+                          onClick={async () => {
+                             try {
+                               setUpdating(true);
+                               const res = await aiApi.getChecklistSuggestions(task.title, task.description || "");
+                               if (res.suggestions && res.suggestions.length > 0) {
+                                 const newSts = res.suggestions.map((s: string, i: number) => ({ id: `ai-${Date.now()}-${i}`, title: s, completed: false }));
+                                 const updated = [...subtasks, ...newSts];
+                                 setSubtasks(updated);
+                                 await tasksApi.update(task.id, { subtasks: updated });
+                                 onUpdate();
+                               }
+                             } catch (err) { alert("AI failed to generate suggestions."); } finally { setUpdating(false); }
+                          }} 
+                          disabled={updating} 
+                          className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg hover:bg-indigo-100 transition"
+                        >
+                          <BrainCircuit className="w-4 h-4" /> AI Suggest
+                        </button>
+                      )}
+                    </div>
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
                        {subtasks.length === 0 ? (
                           <p className="text-xs text-slate-400 italic">No subtasks defined.</p>
@@ -291,6 +297,11 @@ export default function TaskDetailsModal({ task, role, onClose, onUpdate, facult
               <TaskReports taskId={task.id} role={role} />
             </div>
             
+            {/* Task Reports */}
+            <div className="mt-8 border-t border-slate-200 pt-6">
+              <TaskReports taskId={task.id} role={role} />
+            </div>
+            
             {/* Attachments Section */}
             <div className="mt-8 border-t border-slate-200 pt-6">
               <TaskAttachments taskId={task.id} />
@@ -298,7 +309,7 @@ export default function TaskDetailsModal({ task, role, onClose, onUpdate, facult
             
             {/* Audit Trail & Comments */}
             <div className="mt-8 border-t border-slate-200 pt-6">
-              <TaskComments taskId={task.id} readOnly={isHod} />
+              <TaskComments taskId={task.id} />
             </div>
 
           </div>

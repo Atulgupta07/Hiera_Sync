@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Backend secrets
+backend/.env
+backend/firebase-credentials.json
+backend/firebase-credentials.json2
+
+# Uploaded files
+backend/uploads/
