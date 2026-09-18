@@ -38,19 +38,22 @@ def register(user_in: UserCreate, db: Client = Depends(get_db)):
 
     hashed_password = get_password_hash(user_in.password)
     
+    user_role = user_in.role.value if hasattr(user_in.role, 'value') else str(user_in.role)
+    user_status = "ACTIVE" if user_role in ["HOD", "ADMIN"] else "PENDING"
+    
     user_data = {
         "id": fb_user.uid,
         "name": user_in.name,
         "email": user_in.email,
         "hashed_password": hashed_password,
-        "role": user_in.role.value if hasattr(user_in.role, 'value') else str(user_in.role),
-        "department_id": user_in.department_id or "AIML",
+        "role": user_role,
+        "department_id": user_in.department_id,
         "designation": user_in.designation or "Assistant Professor",
         "area_of_interest": user_in.area_of_interest,
         "joining_date": user_in.joining_date or "Not Available",
         "association": user_in.association or "Regular",
         "avatar_url": user_in.avatar_url,
-        "status": "PENDING"
+        "status": user_status
     }
     
     users_ref.document(fb_user.uid).set(user_data)
@@ -107,7 +110,7 @@ def login(login_in: LoginRequest, db: Client = Depends(get_db)):
         name=user_doc.get("name", ""),
         email=user_doc.get("email", ""),
         role=user_doc.get("role", RoleEnum.FACULTY),
-        department_id=user_doc.get("department_id", "AIML"),
+        department_id=user_doc.get("department_id"),
         designation=user_doc.get("designation", "Assistant Professor"),
         area_of_interest=user_doc.get("area_of_interest"),
         joining_date=user_doc.get("joining_date", "Not Available"),
@@ -196,7 +199,7 @@ def create_employee(
         "email": employee_in.email,
         "hashed_password": hashed_password,
         "role": employee_in.role.value if hasattr(employee_in.role, 'value') else str(employee_in.role),
-        "department_id": employee_in.department_id or "AIML",
+        "department_id": employee_in.department_id,
         "designation": employee_in.designation or "Assistant Professor",
         "area_of_interest": employee_in.area_of_interest,
         "joining_date": employee_in.joining_date or "Not Available",

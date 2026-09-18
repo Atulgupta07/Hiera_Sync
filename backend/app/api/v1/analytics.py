@@ -18,7 +18,7 @@ def get_faculty_performance(
 ):
     tasks_ref = db.collection('tasks')
     docs = list(tasks_ref.stream())
-    all_raw_tasks = [doc.to_dict() for doc in docs] if docs else DEFAULT_TASKS
+    all_raw_tasks = [doc.to_dict() for doc in docs] if docs else []
     
     users_ref = db.collection('users')
     user_docs = list(users_ref.where('role', '==', RoleEnum.FACULTY.value).stream())
@@ -37,7 +37,7 @@ def get_faculty_performance(
     results = []
     
     for fac_id, fac_name in faculty_map.items():
-        fac_tasks = [t for t in all_raw_tasks if t.get("assigned_id") == fac_id or t.get("assigned") == fac_name]
+        fac_tasks = [t for t in all_raw_tasks if fac_id in t.get("assignee_ids", []) or t.get("assigned_id") == fac_id or t.get("assigned") == fac_name]
         
         total_tasks = len(fac_tasks)
         completed = 0

@@ -503,3 +503,55 @@ def generate_ai_report(
         ],
         "generated_at": datetime.utcnow().isoformat()
     }
+
+
+from app.schemas.schemas import AIChecklistRequest, AIChecklistResponse
+from app.auth.permissions import get_current_active_user, check_role
+
+@router.post("/checklist-suggestions", response_model=AIChecklistResponse)
+def get_checklist_suggestions(
+    req: AIChecklistRequest,
+    db: Client = Depends(get_db),
+    current_user: User = Depends(check_role([RoleEnum.ADMIN, RoleEnum.HOD]))
+):
+    # This is a mocked AI response as per requirements "AI should generate suggestions"
+    # In a real scenario, this would call Gemini or OpenAI.
+    
+    title_lower = req.title.lower()
+    desc = (req.description or "").lower()
+    
+    suggestions = []
+    
+    if "accreditation" in title_lower or "report" in title_lower:
+        suggestions.extend([
+            "Collect faculty qualification records",
+            "Collect student attendance data",
+            "Verify department statistics",
+            "Prepare supporting documents",
+            "Review final report"
+        ])
+    elif "event" in title_lower or "workshop" in title_lower:
+        suggestions.extend([
+            "Book venue",
+            "Send invitations to speakers",
+            "Prepare event schedule",
+            "Arrange catering",
+            "Collect feedback forms"
+        ])
+    elif "exam" in title_lower or "test" in title_lower:
+        suggestions.extend([
+            "Prepare question papers",
+            "Assign invigilators",
+            "Print answer sheets",
+            "Coordinate with grading team"
+        ])
+    else:
+        suggestions.extend([
+            "Review requirements",
+            "Gather necessary data",
+            "Draft initial version",
+            "Get feedback from stakeholders",
+            "Finalize and submit"
+        ])
+        
+    return {"suggestions": suggestions}

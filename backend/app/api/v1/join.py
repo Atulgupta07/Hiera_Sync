@@ -62,14 +62,20 @@ def submit_join_request(
         "department_id": dept_data['id'],
         "department_name": dept_data.get('name', 'Department'),
         "department_code": req_in.code.upper(),
-        "status": "Pending",
+        "status": "Approved", # Auto-approved since they have the correct code
         "requested_at": datetime.utcnow().isoformat()
     }
     
     requests_ref.document(req_id).set(req_data)
 
+    # Immediately update user profile
+    db.collection('users').document(current_user.id).update({
+        "department_id": dept_data['id'],
+        "status": "ACTIVE"
+    })
+
     # Notify admin
-    send_notification(db, dept_data['hod_id'], "New Join Request", f"{current_user.name} has requested to join your department.", "SYSTEM_ALERT")
+    send_notification(db, dept_data['hod_id'], "New Faculty Joined", f"{current_user.name} has joined your department.", "SYSTEM_ALERT")
 
     return req_data
 

@@ -135,6 +135,9 @@ def upload_task_attachment(
         
     # Save to db
     now = datetime.utcnow().isoformat()
+    role_val = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
+    attachment_type = "HOD_REFERENCE" if role_val in ["HOD", "ADMIN"] else "TASK_ATTACHMENT"
+    
     db_attachment = {
         "id": file_id,
         "task_id": task_id,
@@ -143,10 +146,22 @@ def upload_task_attachment(
         "file_size": file_size,
         "storage_path": storage_path,
         "uploaded_by": current_user.name,
+        "uploaded_by_role": role_val,
+        "attachment_type": attachment_type,
         "created_at": now
     }
     
     db.collection('task_attachments').document(file_id).set(db_attachment)
+    
+    # Activity Log
+    db.collection('activity_logs').add({
+        "timestamp": now,
+        "action": "REFERENCE_DOCUMENT_UPLOADED" if attachment_type == "HOD_REFERENCE" else "TASK_ATTACHMENT_UPLOADED",
+        "details": f"{current_user.name} ({role_val}) uploaded a file: {file.filename}",
+        "category": "task",
+        "task_id": task_id
+    })
+    
     return db_attachment
 
 @router.get("/{task_id}/{attachment_id}/download")
@@ -212,8 +227,14 @@ def delete_task_attachment(
     if data['task_id'] != task_id:
         raise HTTPException(status_code=400, detail="Attachment does not belong to this task")
         
-    if current_user.role == RoleEnum.FACULTY and data['uploaded_by'] != current_user.name:
-        raise HTTPException(status_code=403, detail="Not authorized to delete this attachment")
+    att_type = data.get('attachment_type', 'TASK_ATTACHMENT')
+    role_val = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
+    
+    if role_val == "FACULTY":
+        if att_type == "HOD_REFERENCE" or data.get('uploaded_by_role') in ["HOD", "ADMIN"]:
+            raise HTTPException(status_code=403, detail="Not authorized to delete HOD reference documents")
+        if data.get('uploaded_by') != current_user.name:
+            raise HTTPException(status_code=403, detail="Not authorized to delete this attachment")
         
     # Delete from filesystem
     file_path = data.get('storage_path')

@@ -119,6 +119,8 @@ export interface TaskCreate {
   title: string;
   assigned: string;
   deadline: string;
+  assignees?: string[];
+  assignee_ids?: string[];
   priority?: string;
   status?: string;
   progress?: string;
@@ -294,6 +296,7 @@ export interface TaskCommentResponse extends TaskCommentCreate {
   task_id: string;
   author_id: string;
   author_name: string;
+  author_role?: string;
   created_at: string;
   updated_at: string;
 }
@@ -306,6 +309,8 @@ export interface TaskAttachmentResponse {
   file_size: number;
   storage_path: string;
   uploaded_by: string;
+  uploaded_by_role?: string;
+  attachment_type?: string;
   created_at: string;
 }
 
@@ -390,4 +395,38 @@ export interface AIDashboardSummaryResponse {
   ai_insights: string[];
   teacher_priorities?: AIPriorityItem[];
   hod_actions?: HODActionItem[];
+}
+
+export interface TaskAttachmentResponse {
+  id: string;
+  name: string;
+  url: string;
+  size: string;
+  type: string;
+}
+
+export interface ReportCreate {
+  title: string;
+  description: string;
+  attachments?: TaskAttachmentResponse[];
+}
+
+export interface ReportResponse {
+  id: string;
+  task_id: string;
+  faculty_id: string;
+  faculty_name: string;
+  department_id: string;
+  title: string;
+  description: string;
+  attachments: TaskAttachmentResponse[];
+  status: string;
+  created_at: string;
+  review_notes?: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+}
+
+export interface AIChecklistResponse {
+  suggestions: string[];
 }

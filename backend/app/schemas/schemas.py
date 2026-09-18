@@ -188,13 +188,14 @@ class TaskCommentResponse(TaskCommentCreate):
     task_id: str
     author_id: str
     author_name: str
+    author_role: Optional[str] = None
     created_at: str
     updated_at: str
 
 class TaskAttachmentBase(BaseModel):
     file_name: str
     file_type: str
-    file_size: int
+    file_size: Optional[int] = 0
 
 class TaskAttachmentCreate(TaskAttachmentBase):
     storage_path: str
@@ -203,6 +204,8 @@ class TaskAttachmentResponse(TaskAttachmentCreate):
     id: str
     task_id: str
     uploaded_by: str
+    uploaded_by_role: Optional[str] = None
+    attachment_type: Optional[str] = "TASK_ATTACHMENT"
     created_at: str
 
 class GoalMilestoneBase(BaseModel):
@@ -276,6 +279,8 @@ class TaskCreate(BaseModel):
     reminder: Optional[str] = None
     require_approval: Optional[bool] = False
     assigned_id: Optional[str] = None
+    assignees: Optional[List[str]] = Field(default_factory=list)
+    assignee_ids: Optional[List[str]] = Field(default_factory=list)
     subtasks: List[Subtask] = Field(default_factory=list)
     goal_id: Optional[str] = None
 
@@ -294,6 +299,8 @@ class TaskUpdate(BaseModel):
     reminder: Optional[str] = None
     require_approval: Optional[bool] = None
     assigned_id: Optional[str] = None
+    assignees: Optional[List[str]] = None
+    assignee_ids: Optional[List[str]] = None
     subtasks: Optional[List[Subtask]] = None
     goal_id: Optional[str] = None
 
@@ -523,3 +530,36 @@ class WhatsAppFacultyStatus(BaseModel):
 class WhatsAppOptInUpdate(BaseModel):
     phone: Optional[str] = None
     whatsapp_enabled: bool
+
+# Report Schemas
+class ReportBase(BaseModel):
+    title: str
+    description: str
+
+class ReportCreate(ReportBase):
+    attachments: Optional[List[TaskAttachmentResponse]] = Field(default_factory=list)
+
+class ReportUpdate(BaseModel):
+    status: Optional[str] = None
+    review_notes: Optional[str] = None
+
+class ReportResponse(ReportBase):
+    id: str
+    task_id: str
+    faculty_id: str
+    faculty_name: str
+    department_id: str
+    status: str
+    created_at: str
+    attachments: Optional[List[TaskAttachmentResponse]] = Field(default_factory=list)
+    review_notes: Optional[str] = None
+    reviewed_at: Optional[str] = None
+    reviewed_by: Optional[str] = None
+
+# AI Checklist Schemas
+class AIChecklistRequest(BaseModel):
+    title: str
+    description: Optional[str] = None
+
+class AIChecklistResponse(BaseModel):
+    suggestions: List[str]

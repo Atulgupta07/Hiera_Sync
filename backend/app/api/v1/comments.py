@@ -59,10 +59,21 @@ def create_task_comment(
     db_comment['task_id'] = task_id
     db_comment['author_id'] = current_user.id
     db_comment['author_name'] = current_user.name
+    db_comment['author_role'] = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
     db_comment['created_at'] = now
     db_comment['updated_at'] = now
     
     db.collection('task_comments').document(comment_id).set(db_comment)
+    
+    # Activity Log
+    db.collection('activity_logs').add({
+        "timestamp": now,
+        "action": "COMMENT_ADDED",
+        "details": f"{current_user.name} ({db_comment['author_role']}) added a comment",
+        "category": "task",
+        "department_id": task_data.get("department_id", ""),
+        "task_id": task_id
+    })
     
     # Update task document to sync comments array if necessary, but it's better to fetch dynamically.
     # The prompt allows safe handling if missing, so we'll just fetch dynamically from `task_comments` collection.

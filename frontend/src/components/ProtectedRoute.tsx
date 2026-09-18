@@ -35,6 +35,17 @@ export const ProtectedRoute = ({ allowedRoles }: { allowedRoles?: string[] }) =>
         </div>
       </div>
     );
+  } else if (!user.department_id) {
+    // ACTIVE users without a department must create or join one
+    if (['HOD', 'ADMIN'].includes(user.role)) {
+      if (location.pathname !== '/create-department') {
+        return <Navigate to="/create-department" replace />;
+      }
+    } else {
+      if (location.pathname !== '/join-department') {
+        return <Navigate to="/join-department" replace />;
+      }
+    }
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {

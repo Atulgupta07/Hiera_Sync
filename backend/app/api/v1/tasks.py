@@ -161,7 +161,15 @@ def get_tasks(
     for data in all_raw_tasks:
         # Secure isolation for faculty
         if current_user.role == RoleEnum.FACULTY:
-            if data.get("assigned_id") != current_user.id and current_user.name.lower() not in data.get("assigned", "").lower():
+            is_assigned = False
+            a_ids = data.get("assignee_ids", [])
+            if current_user.id in a_ids:
+                is_assigned = True
+            elif data.get("assigned_id") == current_user.id:
+                is_assigned = True
+            elif current_user.name.lower() in data.get("assigned", "").lower():
+                is_assigned = True
+            if not is_assigned:
                 continue
 
         if priority and data.get("priority", "").lower() != priority.lower():
@@ -263,7 +271,15 @@ def get_task(
         data = doc.to_dict()
         
     if current_user.role == RoleEnum.FACULTY:
-        if data.get("assigned_id") != current_user.id and current_user.name.lower() not in data.get("assigned", "").lower():
+        is_assigned = False
+        a_ids = data.get("assignee_ids", [])
+        if current_user.id in a_ids:
+            is_assigned = True
+        elif data.get("assigned_id") == current_user.id:
+            is_assigned = True
+        elif current_user.name.lower() in data.get("assigned", "").lower():
+            is_assigned = True
+        if not is_assigned:
             raise HTTPException(status_code=403, detail="Not authorized to view this task")
             
     # Quick dynamic risk calc (without full workload context)

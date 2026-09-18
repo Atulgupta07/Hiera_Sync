@@ -16,7 +16,7 @@ export default function HODDashboard() {
   const [showForm, setShowForm] = useState(false);
   
   const [taskForm, setTaskForm] = useState<TaskCreate>({
-    title: "", description: "", category: "General", assigned: "", assigned_id: "",
+    title: "", description: "", category: "General", assigned: "", assigned_id: "", assignees: [], assignee_ids: [],
     start_date: "", deadline: "", deadline_time: "", priority: "High",
     estimated_effort: "", reminder: "1 day before", require_approval: false,
     status: "Pending", progress: "0%", subtasks: []
@@ -63,17 +63,27 @@ export default function HODDashboard() {
   };
 
   const handleCreateTask = async () => {
-    if(!taskForm.title || !taskForm.assigned_id || !taskForm.deadline) {
+    if(!taskForm.title || !taskForm.assignee_ids?.length || !taskForm.deadline) {
       alert("Please fill required fields: Title, Assigned Faculty, and Deadline Date");
       return;
     }
-    const selectedFac = facultyList.find(f => f.id === taskForm.assigned_id);
-    const payload: TaskCreate = { ...taskForm, assigned: selectedFac ? selectedFac.name : "" };
+    
+    const selectedNames = taskForm.assignee_ids!.map(id => facultyList.find(f => f.id === id)?.name || "");
+    const primaryId = taskForm.assignee_ids![0];
+    const primaryName = selectedNames[0];
+    
+    const payload: TaskCreate = { 
+      ...taskForm, 
+      assigned_id: primaryId,
+      assigned: primaryName,
+      assignees: selectedNames 
+    };
+
     try {
       await tasksApi.create(payload);
       setShowForm(false);
       setTaskForm({
-        title: "", description: "", category: "General", assigned: "", assigned_id: "",
+        title: "", description: "", category: "General", assigned: "", assigned_id: "", assignees: [], assignee_ids: [],
         start_date: "", deadline: "", deadline_time: "", priority: "High",
         estimated_effort: "", reminder: "1 day before", require_approval: false,
         status: "Pending", progress: "0%", subtasks: []
@@ -255,7 +265,7 @@ export default function HODDashboard() {
                   {filteredTasks.map(task => (
                     <tr key={task.id} className="hover:bg-slate-50/50 cursor-pointer" onClick={() => setSelectedTask(task)}>
                       <td className="px-5 py-3 font-medium text-slate-800">{task.title}</td>
-                      <td className="px-5 py-3">{task.assigned}</td>
+                      <td className="px-5 py-3">{task.assignees && task.assignees.length > 1 ? `${task.assignees[0]} +${task.assignees.length - 1}` : task.assigned}</td>
                       <td className="px-5 py-3">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                           task.priority === 'High' ? 'bg-red-100 text-red-700' : task.priority === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'

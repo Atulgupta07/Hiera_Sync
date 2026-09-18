@@ -18,6 +18,7 @@ export default function Register() {
     email: "",
     password: "",
     confirmPassword: "",
+    role: "", // Added role field
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -25,6 +26,10 @@ export default function Register() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.role) {
+      setError("Please select a role before creating your account.");
+      return;
+    }
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -37,7 +42,7 @@ export default function Register() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        role: "FACULTY", // Default role
+        role: formData.role, // Pass selected role
       });
       navigate("/login", { state: { message: "Registration successful! Please log in." } });
     } catch (err: any) {
@@ -156,6 +161,25 @@ export default function Register() {
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                 />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-blue-200 mb-1">Role</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User className="h-4 w-4 text-gray-400" />
+                </div>
+                <select
+                  required
+                  className="w-full pl-10 pr-4 py-2.5 bg-white text-gray-900 rounded-xl outline-none focus:ring-2 focus:ring-blue-400 text-sm appearance-none"
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                >
+                  <option value="" disabled>Select Role ▼</option>
+                  <option value="FACULTY">Faculty</option>
+                  <option value="HOD">HOD/Admin</option>
+                </select>
               </div>
             </div>
 

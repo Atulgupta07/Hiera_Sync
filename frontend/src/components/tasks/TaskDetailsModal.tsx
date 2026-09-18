@@ -3,6 +3,8 @@ import { TaskResponse, Subtask, EmployeeResponse } from '../../types';
 import { tasksApi } from '../../api';
 import TaskComments from './TaskComments';
 import TaskAttachments from './TaskAttachments';
+import TaskReports from './TaskReports';
+import { aiApi } from '../../api';
 import { CheckSquare, Square, X, AlertTriangle, Clock, Save, FileText, User as UserIcon, CheckCircle2 } from 'lucide-react';
 
 interface TaskDetailsModalProps {
@@ -279,20 +281,16 @@ export default function TaskDetailsModal({ task, role, onClose, onUpdate, facult
                     </div>
                  </div>
 
-                 {/* Faculty Task Submission Button */}
-                 {!isHod && task.status !== "Completed" && task.status !== "COMPLETED" && task.status !== "Awaiting Approval" && (
-                    <button 
-                       onClick={submitForApproval}
-                       disabled={updating}
-                       className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition shadow-md shadow-emerald-600/20 disabled:opacity-50"
-                    >
-                       <Save className="w-4 h-4"/> Submit Task
-                    </button>
-                 )}
+                 
               </div>
               
             </div>
 
+            {/* Task Reports */}
+            <div className="mt-8 border-t border-slate-200 pt-6">
+              <TaskReports taskId={task.id} role={role} />
+            </div>
+            
             {/* Attachments Section */}
             <div className="mt-8 border-t border-slate-200 pt-6">
               <TaskAttachments taskId={task.id} />
