@@ -15,3 +15,4 @@ export * from './requests';
 export * from './comments';
 export * from './attachments';
 export * from './goals';
+export * from './institutionalCalendar';

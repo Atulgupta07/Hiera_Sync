@@ -85,7 +85,7 @@ export default function Sidebar() {
         path: "/approvals",
         icon: <FaClipboardCheck className="w-4 h-4" />,
         badge: null,
-        roles: ["ADMIN", "HOD"]
+        roles: ["ADMIN", "HOD", "FACULTY"]
       },
       {
         name: "Reports",
