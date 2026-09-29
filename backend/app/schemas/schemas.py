@@ -288,10 +288,7 @@ class TaskRequestBase(BaseModel):
     estimated_effort: Optional[str] = None
     additional_notes: Optional[str] = None
     department_id: Optional[str] = None
-<<<<<<< HEAD
     attachments: Optional[List[dict]] = None
-=======
->>>>>>> 1434925 (Add task document attachment support)
 
 class TaskRequestCreate(TaskRequestBase):
     pass
@@ -383,14 +380,9 @@ class DepartmentGoalBase(BaseModel):
     priority: Optional[str] = "Medium"
     start_date: str
     target_date: str
-<<<<<<< HEAD
-    status: str = "NOT_STARTED"
-    department_id: Optional[str] = None
-    progress: str = "0%"
-=======
     status: str = "NOT_STARTED" # NOT_STARTED, IN_PROGRESS, AT_RISK, COMPLETED, OVERDUE
     department_id: Optional[str] = None
->>>>>>> 1434925 (Add task document attachment support)
+    progress: str = "0%"
 
 class DepartmentGoalCreate(DepartmentGoalBase):
     pass
@@ -438,21 +430,14 @@ class TaskCreate(BaseModel):
     reminder: Optional[str] = None
     require_approval: Optional[bool] = False
     assigned_id: Optional[str] = None
-<<<<<<< HEAD
     assignees: Optional[List[str]] = Field(default_factory=list)
-    assignee_ids: Optional[List[str]] = Field(default_factory=list)
-    subtasks: List[Subtask] = Field(default_factory=list)
-    goal_id: Optional[str] = None
-    department_id: Optional[str] = None
-=======
     co_assignee_id: Optional[str] = None
     co_assignee_name: Optional[str] = None
     assignee_ids: Optional[List[str]] = Field(default_factory=list)
-    department_id: Optional[str] = None
     subtasks: List[Subtask] = Field(default_factory=list)
     goal_id: Optional[str] = None
+    department_id: Optional[str] = None
     linked_request_id: Optional[str] = None
->>>>>>> 1434925 (Add task document attachment support)
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
@@ -469,15 +454,11 @@ class TaskUpdate(BaseModel):
     reminder: Optional[str] = None
     require_approval: Optional[bool] = None
     assigned_id: Optional[str] = None
-<<<<<<< HEAD
     assignees: Optional[List[str]] = None
-    assignee_ids: Optional[List[str]] = None
-=======
     co_assignee_id: Optional[str] = None
     co_assignee_name: Optional[str] = None
     assignee_ids: Optional[List[str]] = None
     department_id: Optional[str] = None
->>>>>>> 1434925 (Add task document attachment support)
     subtasks: Optional[List[Subtask]] = None
     goal_id: Optional[str] = None
     linked_request_id: Optional[str] = None
@@ -532,10 +513,12 @@ class NotificationCreate(BaseModel):
     status: Optional[str] = "New"
     time: Optional[str] = "Just now"
     is_read: bool = False
+    user_id: Optional[str] = None
 
 class NotificationResponse(NotificationCreate):
     id: str
     created_at: Optional[str] = None
+    user_id: Optional[str] = None
 
     class Config:
         from_attributes = True

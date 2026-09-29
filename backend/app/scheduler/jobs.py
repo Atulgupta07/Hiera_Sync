@@ -25,9 +25,11 @@ def parse_activity_datetime(date_str: Optional[str], time_str: Optional[str]) ->
     except Exception:
         return None
 
+_sent_reminder_keys = set()
+
 def check_and_send_calendar_reminders():
     """
-    Background scheduler job: Runs every 5 minutes.
+    Background scheduler job: Runs every 15 minutes.
     Evaluates upcoming calendar activities and sends both in-app notifications
     and WhatsApp reminders (if configured & eligible) with strict deduplication.
     Never triggered by GET /calendar or page refreshes.
@@ -39,8 +41,10 @@ def check_and_send_calendar_reminders():
             return
 
         events_ref = db.collection('events')
-        docs = list(events_ref.stream())
+        # Limit to 50 events to avoid exhausting Firestore read quota
+        docs = list(events_ref.limit(50).stream())
         now = datetime.utcnow()
+        user_cache = {}
 
         for doc in docs:
             evt = doc.to_dict()
@@ -74,7 +78,10 @@ def check_and_send_calendar_reminders():
 
                 for pid in participants:
                     dedup_key = f"rem_{evt_id}_{pid}_{timing_str.replace(' ', '_')}_{start_date}"
+                    if dedup_key in _sent_reminder_keys:
+                        continue
                     if WhatsAppService.is_reminder_already_sent(db, dedup_key):
+                        _sent_reminder_keys.add(dedup_key)
                         continue
 
                     # Send in-app notification
@@ -94,30 +101,32 @@ def check_and_send_calendar_reminders():
 
                     # Send WhatsApp reminder if eligible
                     try:
-                        user_doc = db.collection('users').document(pid).get()
-                        if user_doc.exists:
-                            udata = user_doc.to_dict()
-                            if udata.get("whatsapp_enabled") and udata.get("phone"):
-                                wa_msg = (
-                                    f"Reminder: {evt_title} is scheduled for "
-                                    f"{'tomorrow' if 'day' in timing_str else 'today'} at {start_time}."
-                                )
-                                WhatsAppService.send_and_record(
-                                    db=db,
-                                    sender_id="system",
-                                    sender_name="CampusPulse Scheduler",
-                                    recipient_id=pid,
-                                    recipient_name=udata.get("name", "Faculty"),
-                                    recipient_phone=udata.get("phone"),
-                                    message=wa_msg,
-                                    message_type="calendar_reminder",
-                                    template_name="CALENDAR_ACTIVITY_REMINDER",
-                                    template_params=[evt_title, start_time]
-                                )
+                        if pid not in user_cache:
+                            user_doc = db.collection('users').document(pid).get()
+                            user_cache[pid] = user_doc.to_dict() if user_doc.exists else None
+                        udata = user_cache.get(pid)
+                        if udata and udata.get("whatsapp_enabled") and udata.get("phone"):
+                            wa_msg = (
+                                f"Reminder: {evt_title} is scheduled for "
+                                f"{'tomorrow' if 'day' in timing_str else 'today'} at {start_time}."
+                            )
+                            WhatsAppService.send_and_record(
+                                db=db,
+                                sender_id="system",
+                                sender_name="CampusPulse Scheduler",
+                                recipient_id=pid,
+                                recipient_name=udata.get("name", "Faculty"),
+                                recipient_phone=udata.get("phone"),
+                                message=wa_msg,
+                                message_type="calendar_reminder",
+                                template_name="CALENDAR_ACTIVITY_REMINDER",
+                                template_params=[evt_title, start_time]
+                            )
                     except Exception as exc:
                         logger.error(f"WhatsApp reminder dispatch error for user {pid}: {exc}")
 
                     # Record deduplication key so it is never sent again
+                    _sent_reminder_keys.add(dedup_key)
                     WhatsAppService.record_reminder_sent(
                         db=db,
                         dedup_key=dedup_key,
@@ -127,17 +136,25 @@ def check_and_send_calendar_reminders():
                     )
 
     except Exception as e:
-        logger.error(f"Error in check_and_send_calendar_reminders job: {e}")
+        logger.warning(f"Error or quota reached in check_and_send_calendar_reminders job: {e}")
 
 def daily_reminder():
     logger.info("Running daily task reminder job...")
 
 def start_scheduler():
     scheduler.add_job(daily_reminder, 'cron', hour=8, minute=0)
-    # Check reminders every 5 minutes
-    scheduler.add_job(check_and_send_calendar_reminders, 'interval', minutes=5)
+    # Check reminders every 15 minutes with coalesce
+    scheduler.add_job(
+        check_and_send_calendar_reminders,
+        'interval',
+        minutes=15,
+        max_instances=1,
+        coalesce=True,
+        id='calendar_reminders_job',
+        replace_existing=True
+    )
     scheduler.start()
-    logger.info("APScheduler started with calendar reminder engine running every 5 minutes.")
+    logger.info("APScheduler started with calendar reminder engine running every 15 minutes.")
 
 def stop_scheduler():
     scheduler.shutdown()

@@ -3,6 +3,7 @@ from datetime import datetime
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from google.cloud.firestore import Client
+from google.cloud.firestore_v1.base_query import FieldFilter
 from app.database.session import get_db
 from app.schemas.schemas import TaskCommentCreate, TaskCommentResponse
 from app.auth.permissions import get_current_active_user
@@ -27,7 +28,7 @@ def get_task_comments(
     if current_user.role == RoleEnum.FACULTY and current_user.id not in task_data.get('assignee_ids', []) and task_data.get('assigned_id') != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to view comments for this task")
 
-    comments_ref = db.collection('task_comments').where('task_id', '==', task_id)
+    comments_ref = db.collection('task_comments').where(filter=FieldFilter('task_id', '==', task_id))
     docs = list(comments_ref.stream())
     
     comments = [doc.to_dict() for doc in docs]

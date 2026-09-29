@@ -17,13 +17,16 @@ import firebase_admin
 from firebase_admin import auth as firebase_auth
 from google.cloud.firestore import Client
 from google.cloud.firestore_v1.base_query import FieldFilter
+from google.api_core.exceptions import GoogleAPICallError, ResourceExhausted
+from app.utils.cache import user_cache
+from app.utils.logging import logger
 
 router = APIRouter()
 
 @router.post("/register", response_model=UserResponse)
 def register(user_in: UserCreate, db: Client = Depends(get_db)):
     users_ref = db.collection('users')
-    query = users_ref.where('email', '==', user_in.email).stream()
+    query = users_ref.where(filter=FieldFilter('email', '==', user_in.email)).stream()
     if list(query):
         raise HTTPException(status_code=400, detail="Email already registered")
     
@@ -61,9 +64,17 @@ def register(user_in: UserCreate, db: Client = Depends(get_db)):
 
 @router.post("/login", response_model=LoginResponse)
 def login(login_in: LoginRequest, db: Client = Depends(get_db)):
-    users_ref = db.collection('users')
-    query = users_ref.where('email', '==', login_in.email).stream()
-    users = list(query)
+    # 1. Fetch user document with limit(1) to avoid excessive Firestore reads
+    try:
+        users_ref = db.collection('users')
+        query = users_ref.where(filter=FieldFilter('email', '==', login_in.email)).limit(1).stream()
+        users = list(query)
+    except (ResourceExhausted, GoogleAPICallError) as e:
+        logger.warning(f"Firestore quota exceeded during login attempt: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service temporarily unavailable. Please try again shortly."
+        )
     
     if not users:
         raise HTTPException(
@@ -90,7 +101,7 @@ def login(login_in: LoginRequest, db: Client = Depends(get_db)):
     if user_doc.get("status") == "PENDING":
         try:
             requests_ref = db.collection('join_requests')
-            req_query = requests_ref.where(filter=FieldFilter('faculty_id', '==', user_id)).where(filter=FieldFilter('status', '==', 'Approved')).stream()
+            req_query = requests_ref.where(filter=FieldFilter('faculty_id', '==', user_id)).where(filter=FieldFilter('status', '==', 'Approved')).limit(1).stream()
             approved_reqs = list(req_query)
             if approved_reqs:
                 req_data = approved_reqs[0].to_dict()
@@ -103,7 +114,10 @@ def login(login_in: LoginRequest, db: Client = Depends(get_db)):
                     "department_id": user_doc["department_id"]
                 })
         except Exception as e:
-            print("Login auto-sync error:", e)
+            logger.warning(f"Login auto-sync error: {e}")
+
+    # Prime user cache so subsequent post-login requests do not re-query Firestore
+    user_cache.set(user_doc["email"], User(**user_doc), ttl=60)
     
     user_response = UserResponse(
         id=user_id,
@@ -178,7 +192,7 @@ def create_employee(
     current_user: User = Depends(check_role([RoleEnum.ADMIN, RoleEnum.HOD]))
 ):
     users_ref = db.collection('users')
-    query = users_ref.where('email', '==', employee_in.email).stream()
+    query = users_ref.where(filter=FieldFilter('email', '==', employee_in.email)).stream()
     if list(query):
         raise HTTPException(status_code=400, detail="Email already exists")
     

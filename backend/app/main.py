@@ -36,20 +36,41 @@ app.add_middleware(
 
 app.include_router(api_router, prefix="/api/v1")
 
+from google.api_core.exceptions import GoogleAPICallError, RetryError, ResourceExhausted
+
 @app.exception_handler(GoogleAPICallError)
 async def google_api_exception_handler(request: Request, exc: GoogleAPICallError):
-    logger.error(f"Google API Error: {exc}")
+    logger.warning(f"Google API Error on {request.url.path}: {exc}")
+    is_quota = isinstance(exc, ResourceExhausted) or "429" in str(exc) or "Quota exceeded" in str(exc)
+
+    # 1. Isolate authentication requests
+    if "/auth/" in request.url.path:
+        detail_msg = "Authentication service temporarily unavailable. Please try again shortly." if is_quota else "Authentication service error. Please try again."
+        return JSONResponse(
+            status_code=503,
+            content={"detail": detail_msg, "message": detail_msg}
+        )
+
+    # 2. Isolate notification requests so they never crash the dashboard
+    if "/notifications" in request.url.path:
+        from app.api.v1.notifications import DEFAULT_NOTIFICATIONS
+        return JSONResponse(
+            status_code=200,
+            content=DEFAULT_NOTIFICATIONS
+        )
+
+    msg = "Database quota limit reached. Please try again shortly." if is_quota else "Service temporarily unavailable due to backend failure."
     return JSONResponse(
         status_code=503,
-        content={"message": "Service temporarily unavailable due to backend failure."}
+        content={"message": msg, "detail": msg}
     )
 
 @app.exception_handler(RetryError)
 async def google_retry_exception_handler(request: Request, exc: RetryError):
-    logger.error(f"Google API Retry Error: {exc}")
+    logger.warning(f"Google API Retry Error on {request.url.path}: {exc}")
     return JSONResponse(
         status_code=503,
-        content={"message": "Service temporarily unavailable due to backend failure."}
+        content={"message": "Service temporarily unavailable. Please try again shortly.", "detail": "Service temporarily unavailable. Please try again shortly."}
     )
 
 @app.get("/")

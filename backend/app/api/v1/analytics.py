@@ -2,6 +2,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from google.cloud.firestore import Client
+from google.cloud.firestore_v1.base_query import FieldFilter
 from app.database.session import get_db
 from app.schemas.schemas import FacultyPerformance
 from app.auth.permissions import check_role
@@ -16,12 +17,12 @@ def get_faculty_performance(
     db: Client = Depends(get_db),
     current_user: User = Depends(check_role([RoleEnum.ADMIN, RoleEnum.HOD]))
 ):
-    tasks_ref = db.collection('tasks').where('department_id', '==', current_user.department_id)
+    tasks_ref = db.collection('tasks').where(filter=FieldFilter('department_id', '==', current_user.department_id))
     docs = list(tasks_ref.stream())
     all_raw_tasks = [doc.to_dict() for doc in docs] if docs else []
     
     users_ref = db.collection('users')
-    user_docs = list(users_ref.where('role', '==', RoleEnum.FACULTY.value).where('department_id', '==', current_user.department_id).stream())
+    user_docs = list(users_ref.where(filter=FieldFilter('role', '==', RoleEnum.FACULTY.value)).where(filter=FieldFilter('department_id', '==', current_user.department_id)).stream())
     
     faculty_map = {}
     for ud in user_docs:

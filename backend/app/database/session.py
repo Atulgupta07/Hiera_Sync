@@ -24,11 +24,12 @@ def init_firebase():
             )
 
             cred = credentials.Certificate(settings.FIREBASE_PRIVATE_KEY_PATH)
+            project_id = getattr(cred, "project_id", None) or settings.FIREBASE_PROJECT_ID
 
             firebase_admin.initialize_app(
                 cred,
                 {
-                    "projectId": settings.FIREBASE_PROJECT_ID
+                    "projectId": project_id
                 }
             )
         else:

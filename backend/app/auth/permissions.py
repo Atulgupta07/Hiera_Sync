@@ -3,9 +3,12 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from google.cloud.firestore import Client
 from google.cloud.firestore_v1.base_query import FieldFilter
+from google.api_core.exceptions import GoogleAPICallError, ResourceExhausted
 from app.auth.jwt import verify_token
 from app.database.session import get_db
 from app.models.models import User, RoleEnum
+from app.utils.cache import user_cache
+from app.utils.logging import logger
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
 
@@ -17,9 +20,22 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Client = Depends(g
     )
     token_data = verify_token(token, credentials_exception)
     
-    users_ref = db.collection('users')
-    query = users_ref.where('email', '==', token_data.email).stream()
-    users = list(query)
+    # 1. Check in-memory user cache to avoid redundant Firestore reads on every authenticated request
+    cached_user = user_cache.get(token_data.email)
+    if cached_user is not None:
+        return cached_user
+
+    # 2. Query Firestore with limit(1)
+    try:
+        users_ref = db.collection('users')
+        query = users_ref.where(filter=FieldFilter('email', '==', token_data.email)).limit(1).stream()
+        users = list(query)
+    except (ResourceExhausted, GoogleAPICallError) as e:
+        logger.warning(f"Firestore quota reached during user authentication check: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service temporarily unavailable. Please try again shortly."
+        )
     
     if not users:
         raise credentials_exception
@@ -31,7 +47,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Client = Depends(g
     if user_dict.get("status") == "PENDING":
         try:
             requests_ref = db.collection('join_requests')
-            req_query = requests_ref.where(filter=FieldFilter('faculty_id', '==', user_id)).where(filter=FieldFilter('status', '==', 'Approved')).stream()
+            req_query = requests_ref.where(filter=FieldFilter('faculty_id', '==', user_id)).where(filter=FieldFilter('status', '==', 'Approved')).limit(1).stream()
             approved_reqs = list(req_query)
             if approved_reqs:
                 req_data = approved_reqs[0].to_dict()
@@ -45,9 +61,12 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Client = Depends(g
                     "department_id": user_dict["department_id"]
                 })
         except Exception as e:
-            print("Auto-sync join request check error:", e)
+            logger.warning(f"Auto-sync join request check error: {e}")
 
-    return User(**user_dict)
+    user_obj = User(**user_dict)
+    # Cache user for 60 seconds
+    user_cache.set(token_data.email, user_obj, ttl=60)
+    return user_obj
 
 def get_current_active_user(current_user: User = Depends(get_current_user)):
     if current_user.status != "ACTIVE":

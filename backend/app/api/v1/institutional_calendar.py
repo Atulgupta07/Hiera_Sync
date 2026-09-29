@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, status
 from google.cloud.firestore import Client
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 from app.database.session import get_db
 from app.auth.permissions import get_current_active_user, check_role
@@ -177,7 +178,7 @@ def publish_institutional_calendar(
 
     # Retrieve existing institutional events to cleanly synchronize/replace old import
     existing_ref = db.collection('events')
-    existing_docs = list(existing_ref.where('is_institutional', '==', True).stream())
+    existing_docs = list(existing_ref.where(filter=FieldFilter('is_institutional', '==', True)).stream())
     existing_ids = [doc.id for doc in existing_docs]
     
     # Batch delete old institutional events if re-publishing a revised calendar
@@ -286,7 +287,7 @@ def get_official_institutional_calendar(
     Read-only endpoint for Faculty and HOD to view approved institutional events.
     """
     events_ref = db.collection('events')
-    docs = list(events_ref.where('is_institutional', '==', True).stream())
+    docs = list(events_ref.where(filter=FieldFilter('is_institutional', '==', True)).stream())
     
     events = []
     for doc in docs:

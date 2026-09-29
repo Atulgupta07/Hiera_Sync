@@ -3,6 +3,7 @@ from datetime import datetime
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from google.cloud.firestore import Client
+from google.cloud.firestore_v1.base_query import FieldFilter
 from app.database.session import get_db
 from app.schemas.schemas import ApprovalCreate, ApprovalUpdate, ApprovalResponse
 from app.auth.permissions import get_current_active_user, check_role
@@ -77,7 +78,7 @@ def get_approvals(
 
     # Also aggregate any tasks submitted by faculty with 'Awaiting Approval'
     try:
-        task_docs = list(db.collection('tasks').where('status', '==', 'Awaiting Approval').stream())
+        task_docs = list(db.collection('tasks').where(filter=FieldFilter('status', '==', 'Awaiting Approval')).stream())
         for td in task_docs:
             t = td.to_dict()
             task_app_id = f"task_{t.get('id', td.id)}"

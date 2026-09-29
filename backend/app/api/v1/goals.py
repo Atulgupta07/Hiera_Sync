@@ -3,6 +3,7 @@ from typing import List
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from google.cloud.firestore import Client
+from google.cloud.firestore_v1.base_query import FieldFilter
 from app.database.session import get_db
 from app.schemas.schemas import (
     DepartmentGoalCreate, DepartmentGoalUpdate, DepartmentGoalResponse,
@@ -19,12 +20,7 @@ def get_goals(
     current_user: User = Depends(get_current_active_user)
 ):
     goals_ref = db.collection('department_goals')
-    if current_user.role == RoleEnum.FACULTY:
-        # Faculty sees their own or department goals (let's say they can see all dept goals)
-        docs = list(goals_ref.where('department_id', '==', current_user.department_id).stream())
-    else:
-        # HOD sees dept goals
-        docs = list(goals_ref.where('department_id', '==', current_user.department_id).stream())
+    docs = list(goals_ref.where(filter=FieldFilter('department_id', '==', current_user.department_id)).stream())
     
     goals = []
     for doc in docs:
@@ -32,7 +28,7 @@ def get_goals(
         goal_id = goal_data['id']
         
         # Calculate real progress from linked tasks
-        tasks_ref = db.collection('tasks').where('goal_id', '==', goal_id)
+        tasks_ref = db.collection('tasks').where(filter=FieldFilter('goal_id', '==', goal_id))
         task_docs = list(tasks_ref.stream())
         
         total_tasks = len(task_docs)
@@ -48,7 +44,7 @@ def get_goals(
             goal_data['progress'] = "0%"
             
         # Fetch milestones
-        m_ref = db.collection('goal_milestones').where('goal_id', '==', goal_id)
+        m_ref = db.collection('goal_milestones').where(filter=FieldFilter('goal_id', '==', goal_id))
         m_docs = list(m_ref.stream())
         milestones = [m.to_dict() for m in m_docs]
         milestones.sort(key=lambda x: x.get('order', 0))
@@ -95,7 +91,7 @@ def get_goal(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # Calculate real progress from linked tasks
-    tasks_ref = db.collection('tasks').where('goal_id', '==', goal_id)
+    tasks_ref = db.collection('tasks').where(filter=FieldFilter('goal_id', '==', goal_id))
     task_docs = list(tasks_ref.stream())
     
     total_tasks = len(task_docs)
@@ -109,7 +105,7 @@ def get_goal(
     else:
         goal_data['progress'] = "0%"
         
-    m_ref = db.collection('goal_milestones').where('goal_id', '==', goal_id)
+    m_ref = db.collection('goal_milestones').where(filter=FieldFilter('goal_id', '==', goal_id))
     m_docs = list(m_ref.stream())
     milestones = [m.to_dict() for m in m_docs]
     milestones.sort(key=lambda x: x.get('order', 0))
@@ -145,7 +141,7 @@ def delete_goal(
         raise HTTPException(status_code=404, detail="Goal not found")
         
     # Delete milestones
-    m_ref = db.collection('goal_milestones').where('goal_id', '==', goal_id)
+    m_ref = db.collection('goal_milestones').where(filter=FieldFilter('goal_id', '==', goal_id))
     for m in m_ref.stream():
         db.collection('goal_milestones').document(m.id).delete()
         

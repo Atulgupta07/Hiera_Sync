@@ -3,15 +3,48 @@ from datetime import datetime
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from google.cloud.firestore import Client
+from google.cloud.firestore_v1.base_query import FieldFilter
 from app.database.session import get_db
 from app.schemas.schemas import TaskCreate, TaskUpdate, TaskResponse, Subtask, TaskReviewRequest
 from app.auth.permissions import get_current_active_user, check_role
 from app.models.models import User, RoleEnum
 from app.api.v1.notifications import trigger_notification
+from app.utils.logging import logger
 
 router = APIRouter()
 
-
+DEFAULT_TASKS = [
+    {
+        "id": "tsk_1",
+        "title": "AI Lab Maintenance",
+        "assigned": "Mrs. Neha Gurnani",
+        "deadline": "05 August 2026",
+        "priority": "High",
+        "status": "In Progress",
+        "progress": "75%",
+        "created_at": "2026-08-01T10:00:00Z"
+    },
+    {
+        "id": "tsk_2",
+        "title": "Final Year Project Review",
+        "assigned": "Dr. Animesh Tayal",
+        "deadline": "10 August 2026",
+        "priority": "Medium",
+        "status": "Pending Approval",
+        "progress": "50%",
+        "created_at": "2026-08-01T10:00:00Z"
+    },
+    {
+        "id": "tsk_3",
+        "title": "Student Research Tracking",
+        "assigned": "Dr. Bhushan Mahendra Manjre",
+        "deadline": "15 August 2026",
+        "priority": "Low",
+        "status": "Completed",
+        "progress": "100%",
+        "created_at": "2026-08-01T10:00:00Z"
+    }
+]
 
 def calculate_task_risk(task: Dict[str, Any], faculty_workload: int) -> Dict[str, Any]:
     """
@@ -113,7 +146,7 @@ def get_tasks(
     db: Client = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    tasks_ref = db.collection('tasks').where('department_id', '==', current_user.department_id)
+    tasks_ref = db.collection('tasks').where(filter=FieldFilter('department_id', '==', current_user.department_id))
     docs = list(tasks_ref.stream())
     tasks = []
     
@@ -153,30 +186,6 @@ def get_tasks(
         workload = workload_map.get(assignee_key, 0)
         data = calculate_task_risk(data, workload)
         
-        # Trigger notifications for assigned user if applicable
-        if data.get("assigned_id") and data.get("status") not in ["Completed", "Awaiting Approval"]:
-            risk_score = data.get("risk_score", 0)
-            if risk_score >= 80:
-                trigger_notification(db, data["assigned_id"], "DEADLINE RISK", "Deadline Risk", f"Task '{data.get('title')}' is at high risk of delay.\nRisk: {risk_score}%", "/tasks", "High", "🔴")
-                
-            deadline_str = data.get("deadline", "")
-            if deadline_str:
-                try:
-                    dt = None
-                    if "T" in deadline_str or "Z" in deadline_str:
-                        dt = datetime.fromisoformat(deadline_str.replace("Z", ""))
-                    else:
-                        try:
-                            dt = datetime.strptime(deadline_str, "%d %B %Y")
-                        except ValueError:
-                            dt = datetime.strptime(deadline_str, "%Y-%m-%d")
-                    if dt:
-                        days_left = (dt - datetime.utcnow()).days
-                        if days_left < 0:
-                            trigger_notification(db, data["assigned_id"], "TASK OVERDUE", "Task Overdue", f"Task '{data.get('title')}' is {abs(days_left)} days overdue.", "/tasks", "High", "🔴")
-                except Exception:
-                    pass
-        
         tasks.append(data)
 
     return tasks
@@ -196,27 +205,34 @@ def create_task(
     # Save to Firestore
     db.collection('tasks').document(task_id).set(db_task)
     
-    # Audit Log
-    db.collection('activity_logs').document().set({
-        "user_id": current_user.id,
-        "user_name": current_user.name,
-        "action": f"Task Created: {task.title}",
-        "category": "task",
-        "details": f"New task '{task.title}' assigned to {task.assigned}",
-        "timestamp": datetime.utcnow().isoformat()
-    })
+    # Audit Log (non-blocking)
+    try:
+        db.collection('activity_logs').document().set({
+            "user_id": current_user.id,
+            "user_name": current_user.name,
+            "action": f"Task Created: {task.title}",
+            "category": "task",
+            "details": f"New task '{task.title}' assigned to {task.assigned}",
+            "timestamp": datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        logger.warning(f"Failed to record activity log for task creation: {e}")
     
+    # Send notification (non-blocking)
     if task.assigned_id:
-        trigger_notification(
-            db, 
-            task.assigned_id, 
-            "ASSIGNMENT", 
-            "New Task Assigned", 
-            f"New task assigned by HOD:\n{task.title}\nDeadline: {task.deadline or 'No Deadline'}", 
-            "/tasks",
-            task.priority,
-            "🔵"
-        )
+        try:
+            trigger_notification(
+                db, 
+                task.assigned_id, 
+                "ASSIGNMENT", 
+                "New Task Assigned", 
+                f"New task assigned by HOD:\n{task.title}\nDeadline: {task.deadline or 'No Deadline'}", 
+                "/tasks",
+                task.priority,
+                "🔵"
+            )
+        except Exception as e:
+            logger.warning(f"Failed to trigger task assignment notification: {e}")
         
     return db_task
 
