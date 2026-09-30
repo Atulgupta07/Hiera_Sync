@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+﻿import { useEffect, useMemo, useState, useRef } from "react";
 import { eventsApi, employeesApi, aiApi, institutionalCalendarApi } from "../api";
 import {
   EventResponse,
@@ -15,6 +15,101 @@ import interactionPlugin from "@fullcalendar/interaction";
 import { useAuth } from "../contexts/AuthContext";
 
 import "./CalendarPage.css";
+
+/** Safely extract a human-readable error message from any error shape.
+ * Handles:
+ *  - Custom ApiError:  err.data.detail (string | [{msg,...}])
+ *  - Raw fetch errors: err.data.detail  (attached by extractCalendar)
+ *  - Axios-style:      err.response.data.detail
+ *  - Plain Error:      err.message
+ */
+const getCleanErrorMessage = (err: unknown): string => {
+  if (!err || typeof err !== "object") return "An unexpected error occurred.";
+  const e = err as Record<string, unknown>;
+
+  // 1. Custom ApiError / raw fetch error with attached .data
+  const directDetail = (e?.data as Record<string, unknown> | undefined)?.detail;
+  if (typeof directDetail === "string") return directDetail;
+  if (Array.isArray(directDetail) && directDetail.length > 0) {
+    const first = directDetail[0] as Record<string, unknown>;
+    return typeof first?.msg === "string" ? first.msg : JSON.stringify(first);
+  }
+
+  // 2. Axios-style { response: { data: { detail: ... } } }
+  const resp = e?.response as Record<string, unknown> | undefined;
+  const axiosDetail = (resp?.data as Record<string, unknown> | undefined)?.detail;
+  if (typeof axiosDetail === "string") return axiosDetail;
+  if (Array.isArray(axiosDetail) && axiosDetail.length > 0) {
+    const first = axiosDetail[0] as Record<string, unknown>;
+    return typeof first?.msg === "string" ? first.msg : JSON.stringify(first);
+  }
+
+  // 3. Plain Error.message
+  const msg = e?.message;
+  if (typeof msg === "string" && msg) return msg;
+
+  return "Failed to process academic calendar.";
+};
+
+/** Category → FullCalendar background color */
+const CATEGORY_COLORS: Record<string, string> = {
+  ACADEMIC: "#3B82F6",
+  Academic: "#3B82F6",
+  "Teaching & Learning": "#3B82F6",
+  Examination: "#3B82F6",
+  "Internal Assessment": "#3B82F6",
+  MEETING: "#6366F1",
+  Meeting: "#6366F1",
+  Seminar: "#6366F1",
+  WORKSHOP: "#F97316",
+  Workshop: "#F97316",
+  FACULTY_DEV: "#14B8A6",
+  "Faculty Development": "#14B8A6",
+  Research: "#14B8A6",
+  HOLIDAY: "#10B981",
+  Holiday: "#10B981",
+  "Department Activity": "#8B5CF6",
+  "Student Activity": "#EC4899",
+  "Academic Deadline": "#EF4444",
+};
+
+/** Category chip background colour for the preview table */
+const PREVIEW_CHIP_COLORS: Record<string, { bg: string; text: string }> = {
+  ACADEMIC:      { bg: "#EFF6FF", text: "#1D4ED8" },
+  MEETING:       { bg: "#EEF2FF", text: "#4338CA" },
+  WORKSHOP:      { bg: "#FFF7ED", text: "#C2410C" },
+  FACULTY_DEV:   { bg: "#F0FDFA", text: "#0F766E" },
+  HOLIDAY:       { bg: "#ECFDF5", text: "#065F46" },
+  "Teaching & Learning": { bg: "#EFF6FF", text: "#1D4ED8" },
+  Examination:   { bg: "#EFF6FF", text: "#1D4ED8" },
+  Meeting:       { bg: "#EEF2FF", text: "#4338CA" },
+  Workshop:      { bg: "#FFF7ED", text: "#C2410C" },
+  "Faculty Development": { bg: "#F0FDFA", text: "#0F766E" },
+  Holiday:       { bg: "#ECFDF5", text: "#065F46" },
+};
+
+/**
+ * Returns true when a draft-event title looks like raw OCR noise —
+ * used to flag suspect rows in the preview table with a visual warning.
+ */
+const isTitleNoisy = (title: string): boolean => {
+  const t = (title || "").trim();
+  if (!t || t.length < 4) return true;
+  // Purely numeric / ordinal / punctuation only
+  if (/^[\d\s,.\-\/|]+$/.test(t)) return true;
+  // Standalone ordinal suffix (th, nd, rd, st)
+  if (/^(st|nd|rd|th)$/i.test(t)) return true;
+  // Standalone year fragment: "2026", ".2026", ",2026"
+  if (/^[,.]?\s*20\d{2}$/.test(t)) return true;
+  // Digit optionally followed by ordinal: "10th", "3rd", "1st", "22nd"
+  if (/^\d{1,2}(st|nd|rd|th)?$/i.test(t)) return true;
+  // Table-header noise words
+  if (/^(sr\.?\s*no\.?|ref\.?\s*no\.?|tentative\s+dates?|activity\s*\/\s*event|signatures?|s\.?\s*no\.?|page\s*\d*)$/i.test(t.trim())) return true;
+  // Fragment containing ONLY date ordinals, e.g. "10th - 20th"
+  if (/^\d{1,2}(st|nd|rd|th)?(\s*[-\u2013]\s*\d{1,2}(st|nd|rd|th)?)?$/.test(t)) return true;
+  return false;
+};
+
 
 type ActivityType =
   | "Academic"
@@ -68,37 +163,45 @@ const typeIcons: Record<string, string> = {
 };
 
 const typeClass: Record<string, string> = {
+  ACADEMIC: "academic",
   Academic: "academic",
-  Meeting: "meeting",
-  Workshop: "workshop",
-  "Department Activity": "department",
-  Research: "research",
   "Teaching & Learning": "academic",
+  MEETING: "meeting",
+  Meeting: "meeting",
+  Seminar: "meeting",
+  WORKSHOP: "workshop",
+  Workshop: "workshop",
+  FACULTY_DEV: "fdp",
+  "Faculty Development": "fdp",
+  Research: "research",
+  HOLIDAY: "holiday",
+  Holiday: "holiday",
+  "Department Activity": "department",
   Examination: "examination",
   "Internal Assessment": "assessment",
-  Seminar: "meeting",
-  Holiday: "holiday",
-  "Faculty Development": "fdp",
   "Student Activity": "student",
   "Academic Deadline": "deadline",
   Events: "academic",
 };
 
 const ALL_CATEGORIES = [
+  // Canonical backend enum values
+  "ACADEMIC",
+  "MEETING",
+  "WORKSHOP",
+  "FACULTY_DEV",
+  "HOLIDAY",
+  // Display-name aliases (accepted by map_category_to_enum)
   "Teaching & Learning",
   "Examination",
   "Internal Assessment",
-  "Workshop",
   "Seminar",
-  "Meeting",
-  "Holiday",
   "Faculty Development",
   "Student Activity",
   "Academic Deadline",
+  "Department Activity",
   "Events",
-  "Academic",
   "Research",
-  "Department Activity"
 ];
 
 export default function CalendarPage() {
@@ -200,8 +303,10 @@ export default function CalendarPage() {
       setLoading(true);
       setError("");
 
+      const deptId = user?.department_id || "AIML";
+
       const [eventData, facultyData] = await Promise.all([
-        eventsApi.getAll(),
+        eventsApi.getAll({ department_id: deptId }),
         employeesApi.getAll(),
       ]);
 
@@ -401,7 +506,7 @@ export default function CalendarPage() {
 
   const handleFileUpload = async () => {
     if (!uploadFile) {
-      setUploadError("Please select a document file (PDF, DOCX, or XLSX/XLS).");
+      setUploadError("Please select an academic calendar document file (.xlsx, .csv, .json, or .pdf).");
       return;
     }
 
@@ -409,21 +514,47 @@ export default function CalendarPage() {
       setUploading(true);
       setUploadError("");
 
-      const response = await institutionalCalendarApi.upload(
+      // Use Gemini-backed extract-calendar endpoint (AI extraction + direct Firestore sync)
+      const response = await eventsApi.extractCalendar(
         uploadFile,
         uploadAcademicYear,
-        uploadSemester
+        uploadSemester,
+        user?.department_id || "AIML"
       );
 
-      setDraftId(response.draft_id);
-      setDraftFilename(response.filename);
-      setDraftEvents(response.events);
+      // If extraction returned draft events, show preview modal for verification
+      if (response.events && response.events.length > 0) {
+        // Map EventResponse → InstitutionalEventItem for preview table
+        const draftItems: InstitutionalEventItem[] = response.events.map((ev) => ({
+          id: ev.id,
+          title: ev.title,
+          date: ev.start_date || ev.date || new Date().toISOString().split("T")[0],
+          start_date: ev.start_date || ev.date || new Date().toISOString().split("T")[0],
+          end_date: ev.end_date || ev.start_date || ev.date || "",
+          category: ev.category || ev.type || "ACADEMIC",
+          description: ev.description || "",
+          teaching_learning_notes: ev.teaching_learning_notes || "",
+          location: ev.location || "",
+        }));
 
-      setShowUploadModal(false);
-      setUploadFile(null);
-      setShowPreviewModal(true);
-    } catch (err: any) {
-      setUploadError(err?.message || "Failed to process uploaded calendar document.");
+        setDraftId(""); // extract-calendar syncs directly; draft_id is empty for this flow
+        setDraftFilename(uploadFile.name);
+        setDraftEvents(draftItems);
+        setShowUploadModal(false);
+        setUploadFile(null);
+        setShowPreviewModal(true);
+
+        // Reload calendar so FullCalendar already shows newly synced events in the background
+        await loadCalendar();
+      } else {
+        // No events returned – close modal and reload
+        setShowUploadModal(false);
+        setUploadFile(null);
+        alert(response.message || `Academic Calendar processed. ${response.total_imported} activities synced.`);
+        await loadCalendar();
+      }
+    } catch (err: unknown) {
+      setUploadError(getCleanErrorMessage(err));
     } finally {
       setUploading(false);
     }
@@ -474,21 +605,44 @@ export default function CalendarPage() {
 
     try {
       setPublishing(true);
-      await institutionalCalendarApi.publish(draftId, {
-        academic_year: uploadAcademicYear,
-        semester: uploadSemester,
-        events: draftEvents
-      });
 
-      setShowPreviewModal(false);
-      alert(`Official Institutional Academic Calendar approved and published!\n\nFaculty members will now automatically see the ${draftEvents.length} official activities.`);
+      if (!draftId) {
+        // Gemini extraction flow — use the new /events/publish-calendar endpoint
+        const result = await eventsApi.publishCalendar({
+          events: draftEvents,
+          academic_year: uploadAcademicYear,
+          semester: uploadSemester,
+          department_id: user?.department_id || "AIML"
+        });
+
+        setShowPreviewModal(false);
+        alert(
+          `✅ Academic Calendar published and synchronized successfully!\n\n` +
+          `${result.published_count} official activities are now visible to all faculty members.`
+        );
+      } else {
+        // Standard institutional calendar upload/draft flow
+        await institutionalCalendarApi.publish(draftId, {
+          academic_year: uploadAcademicYear,
+          semester: uploadSemester,
+          events: draftEvents
+        });
+
+        setShowPreviewModal(false);
+        alert(
+          `✅ Official Institutional Academic Calendar approved and published!\n\n` +
+          `Faculty members will now automatically see the ${draftEvents.length} official activities.`
+        );
+      }
+
       await loadCalendar();
-    } catch (err: any) {
-      alert("Failed to publish calendar: " + (err?.message || "Unknown error"));
+    } catch (err: unknown) {
+      alert("Failed to publish calendar: " + getCleanErrorMessage(err));
     } finally {
       setPublishing(false);
     }
   };
+
 
   /* =========================================================
      CALENDAR VERSION HISTORY
@@ -561,6 +715,7 @@ export default function CalendarPage() {
 
   const calendarEvents = filteredEvents.map((event) => {
     const type = event.category || event.type || "Academic";
+    const bgColor = CATEGORY_COLORS[type] || CATEGORY_COLORS["Academic"];
 
     return {
       id: String(event.id),
@@ -570,6 +725,10 @@ export default function CalendarPage() {
         event.end_date && event.end_date !== (event.start_date || event.date)
           ? event.end_date
           : undefined,
+
+      backgroundColor: bgColor,
+      borderColor: bgColor,
+      textColor: "#ffffff",
 
       classNames: [
         "hiera-calendar-event",
@@ -595,10 +754,22 @@ export default function CalendarPage() {
   ========================================================= */
 
   const totalEvents = events.length;
-  const academicCount = events.filter((e) => (e.category || e.type) === "Academic" || (e.category || e.type) === "Teaching & Learning").length;
-  const meetingCount = events.filter((e) => (e.category || e.type) === "Meeting" || (e.category || e.type) === "Seminar").length;
-  const workshopCount = events.filter((e) => (e.category || e.type) === "Workshop").length;
-  const researchCount = events.filter((e) => (e.category || e.type) === "Research" || (e.category || e.type) === "Faculty Development").length;
+  const academicCount = events.filter((e) => {
+    const cat = (e.category || e.type || "").toUpperCase();
+    return cat === "ACADEMIC" || cat === "TEACHING & LEARNING" || cat === "EXAMINATION" || cat === "INTERNAL ASSESSMENT";
+  }).length;
+  const meetingCount = events.filter((e) => {
+    const cat = (e.category || e.type || "").toUpperCase();
+    return cat === "MEETING" || cat === "SEMINAR";
+  }).length;
+  const workshopCount = events.filter((e) => {
+    const cat = (e.category || e.type || "").toUpperCase();
+    return cat === "WORKSHOP";
+  }).length;
+  const researchCount = events.filter((e) => {
+    const cat = (e.category || e.type || "").toUpperCase();
+    return cat === "FACULTY_DEV" || cat === "FACULTY DEVELOPMENT" || cat === "RESEARCH" || cat === "FDP";
+  }).length;
 
   /* =========================================================
      UPCOMING EVENTS
@@ -1029,7 +1200,7 @@ export default function CalendarPage() {
 
             {uploadError && (
               <div style={{ margin: "14px 22px", padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "10px", color: "#dc2626", fontSize: "12px" }}>
-                ⚠️ {uploadError}
+                ⚠️ {String(uploadError)}
               </div>
             )}
 
@@ -1121,7 +1292,7 @@ export default function CalendarPage() {
                 disabled={uploading || !uploadFile}
                 onClick={handleFileUpload}
               >
-                {uploading ? "Analyzing with AI..." : "Extract with AI Assistant →"}
+                {uploading ? "Analyzing with AI..." : "Extract with AI Assistant"}
               </button>
             </div>
           </div>
@@ -1137,7 +1308,7 @@ export default function CalendarPage() {
             <div className="modal-header">
               <div>
                 <div className="section-kicker">STEP 6-7: VERIFICATION REQUIRED</div>
-                <h2>AI Extraction Preview & Verification</h2>
+                <h2>AI Extraction Preview &amp; Verification</h2>
                 <p>
                   AI extracted <strong>{draftEvents.length} activities</strong> from <em>{draftFilename}</em>. Please review, edit dates or categories, add missing entries, or delete mistakes before approving.
                 </p>
@@ -1152,6 +1323,57 @@ export default function CalendarPage() {
               </button>
             </div>
 
+            {/* ── CATEGORY SUMMARY BAR ──────────────────────────────── */}
+            {draftEvents.length > 0 && (
+              <div style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "8px",
+                padding: "10px 22px",
+                background: "#f8fafc",
+                borderBottom: "1px solid #e2e8f0"
+              }}>
+                {Object.entries(
+                  draftEvents.reduce<Record<string, number>>((acc, ev) => {
+                    const k = ev.category || "ACADEMIC";
+                    acc[k] = (acc[k] || 0) + 1;
+                    return acc;
+                  }, {})
+                ).map(([cat, count]) => {
+                  const chip = PREVIEW_CHIP_COLORS[cat] || { bg: "#F1F5F9", text: "#475569" };
+                  return (
+                    <span
+                      key={cat}
+                      style={{
+                        background: chip.bg,
+                        color: chip.text,
+                        padding: "3px 10px",
+                        borderRadius: "999px",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        border: `1px solid ${chip.text}33`
+                      }}
+                    >
+                      {cat}: {count}
+                    </span>
+                  );
+                })}
+                {draftEvents.filter(ev => isTitleNoisy(ev.title)).length > 0 && (
+                  <span style={{
+                    background: "#FEF2F2",
+                    color: "#DC2626",
+                    padding: "3px 10px",
+                    borderRadius: "999px",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    border: "1px solid #FCA5A5"
+                  }}>
+                    ⚠️ {draftEvents.filter(ev => isTitleNoisy(ev.title)).length} suspicious title(s)
+                  </span>
+                )}
+              </div>
+            )}
+
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 22px", background: "#f8fafc", borderBottom: "1px solid #f1f5f9" }}>
               <div style={{ fontSize: "12px", color: "#475569" }}>
                 Status: <span style={{ color: "#d97706", fontWeight: 700 }}>Unverified Draft (Not Yet Published)</span>
@@ -1165,13 +1387,12 @@ export default function CalendarPage() {
               </button>
             </div>
 
-            {/* PREVIEW TABLE */}
+            {/* PREVIEW TABLE – sorted by start_date */}
             <div className="preview-table-container">
               <table className="preview-table">
                 <thead>
                   <tr>
-                    <th style={{ width: "135px" }}>Date (YYYY-MM-DD)</th>
-                    <th style={{ width: "135px" }}>End Date</th>
+                    <th style={{ width: "270px" }}>Date Range</th>
                     <th>Activity / Event Name</th>
                     <th style={{ width: "190px" }}>Category</th>
                     <th>Description</th>
@@ -1179,69 +1400,105 @@ export default function CalendarPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {draftEvents.map((item, idx) => (
-                    <tr key={item.id || idx}>
-                      <td>
-                        <input
-                          type="date"
-                          className="preview-input"
-                          value={item.start_date}
-                          onChange={(e) => handleUpdateDraftItem(idx, "start_date", e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="date"
-                          className="preview-input"
-                          value={item.end_date || item.start_date}
-                          onChange={(e) => handleUpdateDraftItem(idx, "end_date", e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="text"
-                          className="preview-input"
-                          value={item.title}
-                          placeholder="Activity name"
-                          onChange={(e) => handleUpdateDraftItem(idx, "title", e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <select
-                          className="preview-select"
-                          value={item.category}
-                          onChange={(e) => handleUpdateDraftItem(idx, "category", e.target.value)}
+                  {[...draftEvents]
+                    .sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""))
+                    .map((item, idx) => {
+                      // Find original index for mutations
+                      const origIdx = draftEvents.indexOf(item);
+                      const noisy = isTitleNoisy(item.title);
+                      const chip = PREVIEW_CHIP_COLORS[item.category] || { bg: "#F1F5F9", text: "#475569" };
+                      return (
+                        <tr
+                          key={item.id || idx}
+                          style={noisy ? { background: "#FEF9F9", outline: "1px solid #FCA5A5" } : undefined}
                         >
-                          {ALL_CATEGORIES.map((cat) => (
-                            <option key={cat} value={cat}>
-                              {cat}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td>
-                        <input
-                          type="text"
-                          className="preview-input"
-                          value={item.description || ""}
-                          placeholder="Description / notes"
-                          onChange={(e) => handleUpdateDraftItem(idx, "description", e.target.value)}
-                        />
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        <button
-                          className="delete-row-btn"
-                          title="Delete activity"
-                          onClick={() => handleDeleteDraftItem(idx)}
-                        >
-                          🗑
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                          <td>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                              {/* Date-range badge */}
+                              <div style={{
+                                fontSize: "11px", fontWeight: 700,
+                                color: (item.end_date && item.end_date !== item.start_date) ? "#7C3AED" : "#334155",
+                                background: (item.end_date && item.end_date !== item.start_date) ? "#EDE9FE" : "#F1F5F9",
+                                borderRadius: "6px", padding: "2px 6px", letterSpacing: "0.01em",
+                                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                              }}>
+                                {item.start_date
+                                  ? (item.end_date && item.end_date !== item.start_date
+                                      ? `${item.start_date} \u2192 ${item.end_date}`
+                                      : item.start_date)
+                                  : "\u26a0 No date"}
+                              </div>
+                              {/* Editable date pickers */}
+                              <div style={{ display: "flex", gap: "4px" }}>
+                                <input type="date" className="preview-input"
+                                  value={item.start_date} title="Start date"
+                                  style={{ flex: 1, minWidth: "110px" }}
+                                  onChange={(e) => handleUpdateDraftItem(origIdx, "start_date", e.target.value)} />
+                                <input type="date" className="preview-input"
+                                  value={item.end_date || item.start_date} title="End date"
+                                  style={{ flex: 1, minWidth: "110px" }}
+                                  onChange={(e) => handleUpdateDraftItem(origIdx, "end_date", e.target.value)} />
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            {noisy && (
+                              <div style={{ fontSize: "10px", color: "#DC2626", marginBottom: "3px", fontWeight: 700 }}>
+                                ⚠️ Suspicious title — please review
+                              </div>
+                            )}
+                            <input
+                              type="text"
+                              className="preview-input"
+                              value={item.title}
+                              placeholder="Activity name"
+                              style={noisy ? { borderColor: "#EF4444", background: "#FEF2F2" } : undefined}
+                              onChange={(e) => handleUpdateDraftItem(origIdx, "title", e.target.value)}
+                            />
+                          </td>
+                          <td>
+                            <select
+                              className="preview-select"
+                              value={item.category}
+                              style={{
+                                background: chip.bg,
+                                color: chip.text,
+                                fontWeight: 700,
+                                border: `1px solid ${chip.text}44`
+                              }}
+                              onChange={(e) => handleUpdateDraftItem(origIdx, "category", e.target.value)}
+                            >
+                              {ALL_CATEGORIES.map((cat) => (
+                                <option key={cat} value={cat}>
+                                  {cat}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              className="preview-input"
+                              value={item.description || ""}
+                              placeholder="Description / notes"
+                              onChange={(e) => handleUpdateDraftItem(origIdx, "description", e.target.value)}
+                            />
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            <button
+                              className="delete-row-btn"
+                              title="Delete activity"
+                              onClick={() => handleDeleteDraftItem(origIdx)}
+                            >
+                              🗑
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   {draftEvents.length === 0 && (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: "center", padding: "30px", color: "#94a3b8" }}>
+                      <td colSpan={5} style={{ textAlign: "center", padding: "30px", color: "#94a3b8" }}>
                         No activities in draft. Click "+ Add Missing Entry" to add an entry manually.
                       </td>
                     </tr>
