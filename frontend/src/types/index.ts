@@ -113,6 +113,10 @@ export interface EventCreate {
   send_whatsapp_reminder?: boolean;
   reminder_timing?: string;
   is_institutional?: boolean;
+  is_institutional_calendar?: boolean;
+  is_academic_calendar?: boolean;
+  department_id?: string;
+  teaching_learning_notes?: string;
   academic_year?: string;
   semester?: string;
   approved_by?: string;
@@ -145,6 +149,10 @@ export interface EventUpdate {
   send_whatsapp_reminder?: boolean;
   reminder_timing?: string;
   is_institutional?: boolean;
+  is_institutional_calendar?: boolean;
+  is_academic_calendar?: boolean;
+  department_id?: string;
+  teaching_learning_notes?: string;
   academic_year?: string;
   semester?: string;
   approved_by?: string;
@@ -168,6 +176,7 @@ export interface InstitutionalEventItem {
   end_date?: string;
   category: string;
   description?: string;
+  teaching_learning_notes?: string;
   location?: string;
 }
 
@@ -319,10 +328,21 @@ export interface AIChatResponse {
   ai: string;
 }
 
-export interface AIDashboardSummaryResponse {
-  greeting?: string;
-  insights: string[];
-  productivity_score?: string;
+export interface AIChatHistoryItem {
+  id: string;
+  user_id: string;
+  message: string;
+  response: string;
+  created_at: string;
+  timestamp_readable: string;
+}
+
+export interface AcademicCalendarUploadResponse {
+  message: string;
+  total_imported: number;
+  department_id: string;
+  events: EventResponse[];
+  academic_calendar_last_updated: string;
 }
 
 export interface AIReportResponse {
@@ -501,8 +521,7 @@ export interface AIDashboardSummaryResponse {
   hod_actions?: HODActionItem[];
 }
 
-<<<<<<< HEAD
-export interface TaskAttachmentResponse {
+export interface ReportAttachmentItem {
   id: string;
   name: string;
   url: string;
@@ -513,7 +532,7 @@ export interface TaskAttachmentResponse {
 export interface ReportCreate {
   title: string;
   description: string;
-  attachments?: TaskAttachmentResponse[];
+  attachments?: ReportAttachmentItem[];
 }
 
 export interface ReportResponse {
@@ -524,7 +543,7 @@ export interface ReportResponse {
   department_id: string;
   title: string;
   description: string;
-  attachments: TaskAttachmentResponse[];
+  attachments: ReportAttachmentItem[];
   status: string;
   created_at: string;
   review_notes?: string;
@@ -535,7 +554,7 @@ export interface ReportResponse {
 export interface AIChecklistResponse {
   suggestions: string[];
 }
-=======
+
 export interface ConflictCheckRequest {
   event_id?: string;
   start_date: string;
@@ -599,5 +618,3 @@ export interface WhatsAppOptInUpdate {
   phone?: string;
   whatsapp_enabled: boolean;
 }
-
->>>>>>> 1434925 (Add task document attachment support)

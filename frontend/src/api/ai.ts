@@ -2,6 +2,7 @@ import { client } from './client';
 import { 
   AIChatRequest, 
   AIChatResponse,
+  AIChatHistoryItem,
   AIDashboardSummaryResponse,
   AIReportResponse,
   AIChecklistResponse
@@ -10,6 +11,7 @@ import {
 export const aiApi = {
   getChecklistSuggestions: (title: string, description: string) => client<AIChecklistResponse>('/ai/checklist-suggestions', { method: 'POST', data: { title, description } }),
   chat: (data: AIChatRequest) => client<AIChatResponse>('/ai/chat', { data }),
+  getHistory: () => client<AIChatHistoryItem[]>('/ai/history'),
   getDashboardSummary: () => client<AIDashboardSummaryResponse>('/ai/dashboard-summary'),
   generateReport: () => client<AIReportResponse>('/ai/generate-report', { data: {} }),
   getCalendarInsights: () => client<any>('/ai/calendar-insights'),

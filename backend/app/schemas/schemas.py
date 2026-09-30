@@ -157,6 +157,10 @@ class EventCreate(BaseModel):
     send_whatsapp_reminder: Optional[bool] = False
     reminder_timing: Optional[str] = "1 day before"
     is_institutional: Optional[bool] = False
+    is_institutional_calendar: Optional[bool] = False
+    is_academic_calendar: Optional[bool] = False
+    department_id: Optional[str] = None
+    teaching_learning_notes: Optional[str] = None
     academic_year: Optional[str] = None
     semester: Optional[str] = None
     approved_by: Optional[str] = None
@@ -188,6 +192,10 @@ class EventUpdate(BaseModel):
     send_whatsapp_reminder: Optional[bool] = None
     reminder_timing: Optional[str] = None
     is_institutional: Optional[bool] = None
+    is_institutional_calendar: Optional[bool] = None
+    is_academic_calendar: Optional[bool] = None
+    department_id: Optional[str] = None
+    teaching_learning_notes: Optional[str] = None
     academic_year: Optional[str] = None
     semester: Optional[str] = None
     approved_by: Optional[str] = None
@@ -213,6 +221,7 @@ class InstitutionalEventItem(BaseModel):
     end_date: Optional[str] = None
     category: str = "Teaching & Learning"
     description: Optional[str] = ""
+    teaching_learning_notes: Optional[str] = ""
     location: Optional[str] = ""
 
 class InstitutionalCalendarUploadResponse(BaseModel):
@@ -533,6 +542,21 @@ class AIChatRequest(BaseModel):
 class AIChatResponse(BaseModel):
     user: str
     ai: str
+
+class AIChatHistoryItem(BaseModel):
+    id: Optional[str] = None
+    user_id: Optional[str] = None
+    message: Optional[str] = ""
+    response: Optional[str] = ""
+    created_at: Optional[str] = None
+    timestamp_readable: Optional[str] = None
+
+class AcademicCalendarUploadResponse(BaseModel):
+    message: str
+    total_imported: int
+    department_id: str
+    events: List[EventResponse]
+    academic_calendar_last_updated: str
 
 class AIPriorityItem(BaseModel):
     task_id: str

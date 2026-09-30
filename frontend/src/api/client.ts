@@ -34,8 +34,10 @@ export const client = async <T>(endpoint: string, options: RequestOptions = {}):
   const { data, headers: customHeaders, ...customConfig } = options;
   const token = getAuthToken();
 
+  const isFormData = data instanceof FormData;
+
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(customHeaders as Record<string, string>),
   };
 
@@ -50,7 +52,7 @@ export const client = async <T>(endpoint: string, options: RequestOptions = {}):
   };
 
   if (data) {
-    config.body = JSON.stringify(data);
+    config.body = isFormData ? data : JSON.stringify(data);
   }
 
   let response: Response;
