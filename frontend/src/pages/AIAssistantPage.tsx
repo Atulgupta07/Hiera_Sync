@@ -13,18 +13,40 @@ import {
 } from "react-icons/fa";
 import { Sparkles } from "lucide-react";
 import { aiApi } from "../api";
-import { AIChatResponse } from "../types";
+import { AIChatResponse, AIChatHistoryItem } from "../types";
 import { useAuth } from "../contexts/AuthContext";
 import MarkdownRenderer from "../components/MarkdownRenderer";
+
+interface ChatMessage extends AIChatResponse {
+  id?: string;
+  timestamp?: string;
+}
+
+const formatTimestamp = (rawTs?: string) => {
+  if (!rawTs) return "";
+  try {
+    const clean = rawTs.includes("T") || rawTs.includes("Z") ? rawTs : rawTs.replace(" ", "T");
+    const d = new Date(clean);
+    if (isNaN(d.getTime())) return rawTs;
+    return (
+      d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) +
+      " • " +
+      d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+    );
+  } catch {
+    return rawTs;
+  }
+};
 
 export default function AIAssistantPage() {
   const { user } = useAuth();
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState<AIChatResponse[]>([
+  const [messages, setMessages] = useState<ChatMessage[]>([
     {
       user: "System Initialized",
-      ai: `Hello ${user?.name || "Faculty"}! I am HiéraSync AI, your academic workflow intelligence assistant for the AIML Department at SBJIT Nagpur. How can I assist you today?`
+      ai: `Hello ${user?.name || "Faculty"}! I am HiéraSync AI, your academic workflow intelligence assistant for the AIML Department at SBJIT Nagpur. How can I assist you today?`,
+      timestamp: formatTimestamp(new Date().toISOString())
     }
   ]);
 
@@ -33,6 +55,26 @@ export default function AIAssistantPage() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const historyList = await aiApi.getHistory();
+        if (historyList && historyList.length > 0) {
+          const mappedHistory: ChatMessage[] = historyList.map((item: AIChatHistoryItem) => ({
+            id: item.id,
+            user: item.message,
+            ai: item.response,
+            timestamp: formatTimestamp(item.created_at || item.timestamp_readable)
+          }));
+          setMessages(mappedHistory);
+        }
+      } catch (err) {
+        console.error("Failed to load chat history:", err);
+      }
+    };
+    loadHistory();
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -44,15 +86,21 @@ export default function AIAssistantPage() {
 
     if (!messageText) setInput("");
 
+    const nowTs = formatTimestamp(new Date().toISOString());
+
     // Optimistic UI update
-    setMessages(prev => [...prev, { user: textToSend, ai: "..." }]);
+    setMessages(prev => [...prev, { user: textToSend, ai: "...", timestamp: nowTs }]);
     setLoading(true);
 
     try {
       const response = await aiApi.chat({ message: textToSend });
       setMessages(prev => {
         const newMsgs = [...prev];
-        newMsgs[newMsgs.length - 1] = response;
+        newMsgs[newMsgs.length - 1] = {
+          user: response.user,
+          ai: response.ai,
+          timestamp: nowTs
+        };
         return newMsgs;
       });
     } catch (error: any) {
@@ -61,7 +109,8 @@ export default function AIAssistantPage() {
         const newMsgs = [...prev];
         newMsgs[newMsgs.length - 1] = {
           user: textToSend,
-          ai: `⚠️ ${errorMsg}`
+          ai: `⚠️ ${errorMsg}`,
+          timestamp: nowTs
         };
         return newMsgs;
       });
@@ -74,7 +123,8 @@ export default function AIAssistantPage() {
     setMessages([
       {
         user: "System Initialized",
-        ai: `Conversation cleared. Ready for new queries regarding AIML department tasks, approvals, or schedules!`
+        ai: `Conversation cleared. Ready for new queries regarding AIML department tasks, approvals, or schedules!`,
+        timestamp: formatTimestamp(new Date().toISOString())
       }
     ]);
   };
@@ -154,10 +204,15 @@ export default function AIAssistantPage() {
               <div key={index} className="space-y-3">
                 {/* User Message */}
                 {msg.user && (
-                  <div className="flex justify-end">
+                  <div className="flex flex-col items-end">
                     <div className="bg-[#4338CA] text-white rounded-2xl rounded-tr-xs px-5 py-3 max-w-[80%] shadow-sm text-sm font-medium leading-relaxed">
                       {msg.user}
                     </div>
+                    {msg.timestamp && (
+                      <span className="text-[10px] text-gray-400 mt-1 mr-1">
+                        {msg.timestamp}
+                      </span>
+                    )}
                   </div>
                 )}
 
@@ -166,16 +221,23 @@ export default function AIAssistantPage() {
                   <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center text-xs shadow-xs shrink-0 mt-0.5">
                     <Sparkles className="w-4 h-4" />
                   </div>
-                  <div className="bg-white border border-gray-200/80 text-gray-800 rounded-2xl rounded-tl-xs p-4 max-w-[85%] shadow-xs text-sm leading-relaxed whitespace-pre-wrap">
-                    {msg.ai === "..." ? (
-                      <div className="flex items-center gap-2 text-indigo-600 py-1 font-medium">
-                        <span className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce" />
-                        <span className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce [animation-delay:0.2s]" />
-                        <span className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce [animation-delay:0.4s]" />
-                        <span className="text-xs text-gray-400 ml-2">Analyzing department context...</span>
-                      </div>
-                    ) : (
-                      <MarkdownRenderer content={msg.ai} />
+                  <div className="flex flex-col max-w-[85%]">
+                    <div className="bg-white border border-gray-200/80 text-gray-800 rounded-2xl rounded-tl-xs p-4 shadow-xs text-sm leading-relaxed whitespace-pre-wrap">
+                      {msg.ai === "..." ? (
+                        <div className="flex items-center gap-2 text-indigo-600 py-1 font-medium">
+                          <span className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce" />
+                          <span className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce [animation-delay:0.2s]" />
+                          <span className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce [animation-delay:0.4s]" />
+                          <span className="text-xs text-gray-400 ml-2">Analyzing department context...</span>
+                        </div>
+                      ) : (
+                        <MarkdownRenderer content={msg.ai} />
+                      )}
+                    </div>
+                    {msg.timestamp && msg.ai !== "..." && (
+                      <span className="text-[10px] text-gray-400 mt-1 ml-1">
+                        {msg.timestamp}
+                      </span>
                     )}
                   </div>
                 </div>

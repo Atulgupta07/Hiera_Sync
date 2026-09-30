@@ -1,12 +1,13 @@
 import os
 import urllib.request
 import json
+import uuid
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta, date
 from fastapi import APIRouter, Depends
 from google.cloud.firestore import Client
 from app.database.session import get_db
-from app.schemas.schemas import AIChatRequest, AIChatResponse, AIDashboardSummaryResponse, AIReportResponse, AIPriorityItem, HODActionItem
+from app.schemas.schemas import AIChatRequest, AIChatResponse, AIChatHistoryItem, AIDashboardSummaryResponse, AIReportResponse, AIPriorityItem, HODActionItem
 from app.auth.permissions import get_current_active_user
 from app.models.models import User, RoleEnum
 from app.config.settings import settings
@@ -14,6 +15,23 @@ from app.utils.logging import logger
 from app.api.v1.tasks import calculate_task_risk
 
 router = APIRouter()
+
+def parse_deadline_date(deadline_str: str) -> Optional[date]:
+    if not deadline_str:
+        return None
+    try:
+        clean_str = deadline_str.strip()
+        if "T" in clean_str or "Z" in clean_str:
+            clean_str = clean_str.replace("Z", "").split("T")[0]
+            return datetime.strptime(clean_str, "%Y-%m-%d").date()
+        for fmt in ("%Y-%m-%d", "%d %B %Y", "%d %b %Y", "%B %d, %Y", "%b %d, %Y", "%d-%m-%Y"):
+            try:
+                return datetime.strptime(clean_str, fmt).date()
+            except ValueError:
+                pass
+    except Exception:
+        pass
+    return None
 
 def get_days_overdue(task: Dict[str, Any]) -> int:
     deadline_str = task.get("deadline", "")
@@ -245,6 +263,12 @@ def get_active_project_context(db: Client, current_user: User):
     from app.api.v1.tasks import DEFAULT_TASKS
     from app.api.v1.approvals import DEFAULT_APPROVALS
 
+    server_today = datetime.utcnow().date()
+    tomorrow = server_today + timedelta(days=1)
+    yesterday = server_today - timedelta(days=1)
+    start_of_week = server_today - timedelta(days=server_today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+
     # 1. Tasks
     try:
         tasks_ref = db.collection('tasks')
@@ -270,6 +294,22 @@ def get_active_project_context(db: Client, current_user: User):
         assignee_key = data.get("assigned_id") or data.get("assigned")
         wl = workload_map.get(assignee_key, 0)
         data = calculate_task_risk(data, wl)
+
+        # Parse deadline and calculate temporal flags & status normalization
+        d_date = parse_deadline_date(data.get("deadline", ""))
+        data["is_today"] = (d_date == server_today) if d_date else False
+        data["is_tomorrow"] = (d_date == tomorrow) if d_date else False
+        data["is_yesterday"] = (d_date == yesterday) if d_date else False
+        data["is_this_week"] = (start_of_week <= d_date <= end_of_week) if d_date else False
+
+        raw_st = str(data.get("status", "")).strip().upper()
+        if raw_st in ["COMPLETED", "APPROVED", "DONE"]:
+            data["status_normalized"] = "COMPLETED"
+        elif raw_st in ["IN_PROGRESS", "IN PROGRESS", "DOING"]:
+            data["status_normalized"] = "IN_PROGRESS"
+        else:
+            data["status_normalized"] = "PENDING"
+
         tasks.append(data)
         
         assigned_id = data.get("assigned_id")
@@ -315,6 +355,11 @@ def get_active_project_context(db: Client, current_user: User):
         "pending_approvals": pending_approvals if pending_approvals else approvals,
         "events": events,
         "upcoming_events": upcoming_events if upcoming_events else events,
+        "server_today": server_today,
+        "tomorrow": tomorrow,
+        "yesterday": yesterday,
+        "start_of_week": start_of_week,
+        "end_of_week": end_of_week,
         "_db": db
     }
 
@@ -325,7 +370,105 @@ def execute_local_fallback_query(query: str, current_user: User, context: dict) 
     upcoming_events = context.get("upcoming_events", [])
     all_tasks = context.get("all_tasks", [])
 
-    # Intent 1: Tasks / Workload
+    server_today = context.get("server_today", datetime.utcnow().date())
+    tomorrow = context.get("tomorrow", server_today + timedelta(days=1))
+    yesterday = context.get("yesterday", server_today - timedelta(days=1))
+
+    # Detect specific temporal query intents
+    is_tomorrow_query = any(k in q for k in ["tomorrow", "twomorow", "twomorows", "tomorrows", "to morrow"])
+    is_today_query = any(k in q for k in ["today", "today's", "todays"])
+    is_yesterday_query = any(k in q for k in ["yesterday", "yesterday's"])
+    is_this_week_query = any(k in q for k in ["this week", "week's"])
+
+    is_pending_query = any(k in q for k in ["pending", "active", "open", "incomplete", "unfinished"])
+    is_completed_query = any(k in q for k in ["completed", "done", "finished", "approved"])
+
+    if is_tomorrow_query:
+        tomorrow_tasks = [
+            t for t in user_tasks 
+            if t.get("is_tomorrow") or parse_deadline_date(t.get("deadline", "")) == tomorrow
+        ]
+        if not tomorrow_tasks:
+            tomorrow_tasks = [
+                t for t in all_tasks 
+                if t.get("is_tomorrow") or parse_deadline_date(t.get("deadline", "")) == tomorrow
+            ]
+        if not tomorrow_tasks:
+            return "You have no tasks scheduled for tomorrow."
+        
+        msg = f"### 📋 Tomorrow's Tasks ({tomorrow.strftime('%Y-%m-%d')})\n\n"
+        msg += f"Retrieved **{len(tomorrow_tasks)}** task(s) scheduled for tomorrow:\n\n"
+        for t in tomorrow_tasks:
+            title = t.get("title", "Untitled Task")
+            assigned = t.get("assigned", current_user.name)
+            priority = t.get("priority", "Medium")
+            status = t.get("status", "Pending")
+            progress = t.get("progress", "0%")
+            msg += f"* **{title}**\n"
+            msg += f"  * **Assigned To**: {assigned}\n"
+            msg += f"  * **Priority**: `{priority}` | **Status**: `{status}` | **Progress**: {progress}\n\n"
+        return msg
+
+    if is_today_query and any(k in q for k in ["task", "work", "todo", "assigned", "schedule"]):
+        today_tasks = [
+            t for t in user_tasks 
+            if t.get("is_today") or parse_deadline_date(t.get("deadline", "")) == server_today
+        ]
+        if not today_tasks:
+            return "You have no tasks scheduled for today."
+        msg = f"### 📋 Today's Tasks ({server_today.strftime('%Y-%m-%d')})\n\n"
+        msg += f"Retrieved **{len(today_tasks)}** task(s) scheduled for today:\n\n"
+        for t in today_tasks:
+            title = t.get("title", "Untitled Task")
+            assigned = t.get("assigned", current_user.name)
+            priority = t.get("priority", "Medium")
+            status = t.get("status", "In Progress")
+            progress = t.get("progress", "0%")
+            msg += f"* **{title}**\n"
+            msg += f"  * **Assigned To**: {assigned}\n"
+            msg += f"  * **Priority**: `{priority}` | **Status**: `{status}` | **Progress**: {progress}\n\n"
+        return msg
+
+    if is_yesterday_query:
+        yesterday_tasks = [
+            t for t in user_tasks 
+            if t.get("is_yesterday") or parse_deadline_date(t.get("deadline", "")) == yesterday
+        ]
+        if not yesterday_tasks:
+            return "You had no tasks scheduled for yesterday."
+        msg = f"### 📋 Yesterday's Tasks ({yesterday.strftime('%Y-%m-%d')})\n\n"
+        for t in yesterday_tasks:
+            msg += f"* **{t.get('title')}** (Status: `{t.get('status')}`)\n"
+        return msg
+
+    if is_this_week_query and any(k in q for k in ["task", "work", "todo"]):
+        week_tasks = [t for t in user_tasks if t.get("is_this_week")]
+        if not week_tasks:
+            return "You have no tasks scheduled for this week."
+        msg = f"### 📋 Tasks Scheduled for This Week\n\n"
+        for t in week_tasks:
+            msg += f"* **{t.get('title')}** — Deadline: {t.get('deadline')} | Priority: `{t.get('priority')}`\n"
+        return msg
+
+    if is_completed_query and any(k in q for k in ["task", "work", "todo"]):
+        comp_tasks = [t for t in user_tasks if t.get("status_normalized") == "COMPLETED"]
+        if not comp_tasks:
+            return "You have no completed tasks."
+        msg = f"### ✅ Completed Tasks ({len(comp_tasks)})\n\n"
+        for t in comp_tasks:
+            msg += f"* **{t.get('title')}** — Status: Completed\n"
+        return msg
+
+    if is_pending_query and any(k in q for k in ["task", "work", "todo"]):
+        pend_tasks = [t for t in user_tasks if t.get("status_normalized") != "COMPLETED"]
+        if not pend_tasks:
+            return "You have no pending tasks."
+        msg = f"### 📋 Pending Tasks ({len(pend_tasks)})\n\n"
+        for t in pend_tasks[:6]:
+            msg += f"* **{t.get('title')}** — Deadline: {t.get('deadline', 'N/A')} | Status: `{t.get('status')}`\n"
+        return msg
+
+    # Intent 1: General Tasks / Workload
     if any(k in q for k in ["task", "assigned", "work", "todo", "progress", "overdue"]):
         if not user_tasks:
             return f"### 📋 Active Tasks for {current_user.name}\n\nNo active tasks currently assigned to you in the AIML Department."
@@ -369,7 +512,7 @@ def execute_local_fallback_query(query: str, current_user: User, context: dict) 
         return msg
 
     # Intent 3: Calendar / Events / Schedule / Institutional Activities
-    elif any(k in q for k in ["calendar", "event", "schedule", "deadline", "upcoming", "meeting", "hackathon", "workshop", "assessment", "exam", "fdp", "activity", "activities", "holiday", "tomorrow", "this week", "next week", "this month", "september", "october", "november", "december", "january", "february", "march", "april", "may", "june", "july", "august"]):
+    elif any(k in q for k in ["calendar", "event", "schedule", "deadline", "upcoming", "meeting", "hackathon", "workshop", "assessment", "exam", "fdp", "activity", "activities", "holiday", "this month", "september", "october", "november", "december", "january", "february", "march", "april", "may", "june", "july", "august"]):
         if context.get("_db"):
             from app.services.institutional_ai import query_institutional_calendar
             res = query_institutional_calendar(context.get("_db"), current_user, query)
@@ -447,23 +590,29 @@ def gemini_query(
     db: Client = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    # Fetch live project context from Firestore (or fallback defaults)
     context = get_active_project_context(db, current_user)
+    server_today = context.get("server_today", datetime.utcnow().date())
+    tomorrow = context.get("tomorrow", server_today + timedelta(days=1))
 
-    # Check key validity (ignore empty or generic placeholder)
     api_key = settings.GEMINI_API_KEY.strip() if settings.GEMINI_API_KEY else ""
     is_placeholder = not api_key or "your_key_here" in api_key.lower() or "your_gemini_api_key" in api_key.lower()
 
+    ai_answer = None
+
     if not is_placeholder:
         try:
-            # Build system prompt with injected context
             system_instruction = (
                 f"You are HiéraSync AI, the Academic Workflow & Department Intelligence Assistant for SBJIT Nagpur (AIML Department).\n"
-                f"User Profile: Name={current_user.name}, Role={current_user.role.value if hasattr(current_user.role, 'value') else current_user.role}, ID={current_user.id}, Dept=AIML.\n\n"
+                f"User Profile: Name={current_user.name}, Role={current_user.role.value if hasattr(current_user.role, 'value') else current_user.role}, ID={current_user.id}, Dept=AIML.\n"
+                f"SERVER CURRENT DATE: {server_today.strftime('%Y-%m-%d')} ({server_today.strftime('%A')}). Tomorrow is {tomorrow.strftime('%Y-%m-%d')}.\n\n"
                 f"ACTIVE USER TASKS:\n{json.dumps(context['user_tasks'], indent=2)}\n\n"
                 f"PENDING APPROVALS:\n{json.dumps(context['pending_approvals'], indent=2)}\n\n"
                 f"UPCOMING EVENTS & CALENDAR:\n{json.dumps(context['upcoming_events'], indent=2)}\n\n"
-                f"Instructions: Answer user queries accurately using the active institutional context above. Format your response with clear Markdown formatting (headers, bold text, bullet points)."
+                f"STRICT SYSTEM PROMPT RULES:\n"
+                f"Rule 1 (Strict Temporal Scope): If the user asks about 'tomorrow\'s tasks' (or 'twomorow', 'tomorrow'), check task deadlines (`is_tomorrow` flag or deadline matching tomorrow). ONLY list tasks due tomorrow ({tomorrow.strftime('%Y-%m-%d')}). If no tasks match tomorrow\'s date, reply directly: 'You have no tasks scheduled for tomorrow.' If user asks for 'today\'s tasks', ONLY list tasks with `is_today=True`.\n"
+                f"Rule 2 (Status Precision): If user asks for 'pending tasks', exclude all COMPLETED tasks. If asking for 'completed tasks', exclude pending or in-progress tasks.\n"
+                f"Rule 3 (No Mass Data Dumps): Answer strictly what was asked. Never list the entire database registry of unrelated tasks when a filtered question is asked.\n\n"
+                f"Instructions: Answer user queries accurately using the active context and strict rules above. Format response in clean Markdown."
             )
 
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
@@ -486,13 +635,46 @@ def gemini_query(
             result = json.loads(response.read().decode('utf-8'))
             answer = result['candidates'][0]['content']['parts'][0]['text']
             if answer and answer.strip():
-                return {"user": request.message, "ai": answer.strip()}
+                ai_answer = answer.strip()
         except Exception as e:
             logger.error(f"Gemini API Error: {str(e)}. Falling back to local context engine.")
 
-    # Fallback to local contextual matching engine
-    fallback_response = execute_local_fallback_query(request.message, current_user, context)
-    return {"user": request.message, "ai": fallback_response}
+    if not ai_answer:
+        ai_answer = execute_local_fallback_query(request.message, current_user, context)
+
+    # Save conversation record in Firestore ai_chats collection
+    chat_id = f"chat_{uuid.uuid4().hex[:12]}"
+    now = datetime.utcnow()
+    chat_record = {
+        "id": chat_id,
+        "user_id": current_user.id,
+        "message": request.message,
+        "response": ai_answer,
+        "created_at": now.isoformat(),
+        "timestamp_readable": now.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    try:
+        db.collection('ai_chats').document(chat_id).set(chat_record)
+    except Exception as e:
+        logger.error(f"Failed to save AI chat message to Firestore ai_chats: {e}")
+
+    return {"user": request.message, "ai": ai_answer}
+
+
+@router.get("/history", response_model=List[AIChatHistoryItem])
+def get_ai_chat_history(
+    db: Client = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    try:
+        chats_ref = db.collection('ai_chats')
+        docs = list(chats_ref.where('user_id', '==', current_user.id).stream())
+        history = [doc.to_dict() for doc in docs]
+        history.sort(key=lambda x: x.get("created_at", ""))
+        return history
+    except Exception as e:
+        logger.error(f"Error reading ai_chats history: {e}")
+        return []
 
 
 @router.post("/generate-report", response_model=AIReportResponse)
